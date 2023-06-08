@@ -355,6 +355,7 @@ impl ValidatorNamespaceDef {
                 }
                 Ok(Type::EntityOrRecord(EntityRecordKind::Record {
                     attrs: Attributes::with_required_attributes(required_attrs),
+                    open_attributes: false,
                 }))
             }
             JSONValue::Set(v) => match v.get(0) {
@@ -1030,7 +1031,7 @@ impl ValidatorSchema {
 
     fn record_attributes_or_error(ty: Type) -> Result<Attributes> {
         match ty {
-            Type::EntityOrRecord(EntityRecordKind::Record { attrs }) => Ok(attrs),
+            Type::EntityOrRecord(EntityRecordKind::Record { attrs, .. }) => Ok(attrs),
             _ => Err(SchemaError::ContextOrShapeNotRecord),
         }
     }
@@ -1052,7 +1053,7 @@ impl ValidatorSchema {
                 }
             }
 
-            Type::EntityOrRecord(EntityRecordKind::Record { attrs }) => {
+            Type::EntityOrRecord(EntityRecordKind::Record { attrs, .. }) => {
                 for (_, attr_ty) in attrs.iter() {
                     Self::check_undeclared_in_type(
                         &attr_ty.attr_type,
