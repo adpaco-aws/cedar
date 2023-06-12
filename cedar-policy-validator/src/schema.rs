@@ -327,6 +327,14 @@ impl ValidatorNamespaceDef {
                         entity_type.shape.into_inner(),
                     )?;
 
+                    if cfg!(not(feature = "partial_schema"))
+                        && entity_type.member_of_types_incomplete
+                    {
+                        return Err(SchemaError::UnsupportedSchemaFeature(
+                            UnsupportedFeature::OpenRecordsAndEntities,
+                        ));
+                    }
+
                     Ok((
                         name,
                         EntityTypeFragment {
@@ -465,6 +473,12 @@ impl ValidatorNamespaceDef {
                         Self::convert_attr_jsonval_map_to_attributes(
                             action_type.attributes.unwrap_or_default(),
                         )?;
+
+                    if cfg!(not(feature = "partial_schema")) && action_type.member_of_incomplete {
+                        return Err(SchemaError::UnsupportedSchemaFeature(
+                            UnsupportedFeature::OpenRecordsAndEntities,
+                        ));
+                    }
 
                     Ok((
                         action_id,
@@ -658,11 +672,20 @@ impl ValidatorNamespaceDef {
             SchemaType::Type(SchemaTypeVariant::Record {
                 attributes,
                 additional_attributes: open_attributes,
-            }) => Ok(
-                Self::parse_record_attributes(default_namespace, attributes)?.map(move |attrs| {
-                    Type::record_with_attributes_open_attributes(attrs, open_attributes)
-                }),
-            ),
+            }) => {
+                if cfg!(not(feature = "partial_schema")) && open_attributes {
+                    return Err(SchemaError::UnsupportedSchemaFeature(
+                        UnsupportedFeature::OpenRecordsAndEntities,
+                    ));
+                }
+                Ok(
+                    Self::parse_record_attributes(default_namespace, attributes)?.map(
+                        move |attrs| {
+                            Type::record_with_attributes_open_attributes(attrs, open_attributes)
+                        },
+                    ),
+                )
+            }
             SchemaType::Type(SchemaTypeVariant::Entity { name }) => {
                 let entity_type_name = Self::parse_possibly_qualified_name_with_default_namespace(
                     &name,
