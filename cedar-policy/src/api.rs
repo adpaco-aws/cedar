@@ -2849,6 +2849,19 @@ mod entity_uid_tests {
         assert_eq!(euid.type_name().namespace_components().count(), 0);
     }
 
+    #[cfg_attr(kani, kani::proof)]
+    fn entity_uid_no_namespace_kani() {
+        let entity_id = EntityId::from_str("bobby").expect("failed at constructing EntityId");
+        let entity_type_name =
+            EntityTypeName::from_str("User").expect("failed at constructing EntityTypeName");
+        let euid = EntityUid::from_type_name_and_id(entity_type_name, entity_id);
+        assert_eq!(euid.id().as_ref(), "bobby");
+        assert_eq!(euid.type_name().to_string(), "User");
+        assert_eq!(euid.type_name().basename(), "User");
+        assert_eq!(euid.type_name().namespace(), String::new());
+        assert_eq!(euid.type_name().namespace_components().count(), 0);
+    }
+
     /// building an `EntityUid` from components, with many nested namespaces
     #[test]
     fn entity_uid_nested_namespaces() {
