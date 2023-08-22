@@ -399,6 +399,40 @@ impl std::fmt::Debug for Authorizer {
     }
 }
 
+#[cfg(kani)]
+mod verification {
+    use std::collections::BTreeMap;
+
+    use crate::parser;
+
+    use super::*;
+
+    /// A harness copied from the test harness below with the same name.
+    /// Keeps unwinding if `kani::unwind(<num>)` is not used:
+    /// ```
+    /// [...]
+    /// Unwinding loop _ZN91_$LT$core..slice..iter..Iter$LT$T$GT$$u20$as$u20$core..iter..traits..iterator..Iterator$GT$9rposition17h24f7690c17bbe624E.0 iteration 577 file /home/ubuntu/.rustup/toolchains/nightly-2023-08-04-x86_64-unknown-linux-gnu/lib/rustlib/src/rust/library/core/src/slice/iter/macros.rs line 361 column 24 function <std::slice::Iter<'_, u8> as std::iter::Iterator>::rposition::<[closure@parser::text_to_cst::grammar::core::str::<impl str>::floor_char_boundary::{closure#0}]> thread 0
+    /// [...]
+    /// ```
+    /// Without using additional options, we get an OOM error when verifying this harness.
+    /// The OOM error also happens when using `--no-memory-safety-checks`.
+    #[kani::proof]
+    #[kani::unwind(2)]
+    fn authorizer_sanity_check_empty() {
+        let a = Authorizer::new();
+        let q = Request::new(
+            EntityUID::with_eid("p"),
+            EntityUID::with_eid("a"),
+            EntityUID::with_eid("r"),
+            Context::empty(),
+        );
+        let pset = PolicySet::new();
+        let entities = Entities::new();
+        let ans = a.is_authorized(&q, &pset, &entities);
+        assert_eq!(ans.decision, Decision::Deny);
+    }
+}
+
 #[cfg(test)]
 mod test {
     use std::collections::BTreeMap;

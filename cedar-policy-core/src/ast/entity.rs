@@ -77,7 +77,7 @@ impl StaticallyTyped for EntityUID {
 impl EntityUID {
     /// Create an `EntityUID` with the given string as its EID.
     /// Useful for testing.
-    #[cfg(test)]
+    #[cfg(any(test, kani))]
     pub(crate) fn with_eid(eid: &str) -> Self {
         Self {
             ty: Self::test_entity_type(),
@@ -91,7 +91,7 @@ impl EntityUID {
     // GRCOV_BEGIN_COVERAGE
 
     /// The type of entities created with the above `with_eid()`.
-    #[cfg(test)]
+    #[cfg(any(test, kani))]
     pub(crate) fn test_entity_type() -> EntityType {
         let name = Name::parse_unqualified_name("test_entity_type")
             .expect("test_entity_type should be a valid identifier");
