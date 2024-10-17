@@ -179,13 +179,13 @@ impl ValidationError {
         source_loc: Option<Loc>,
         policy_id: PolicyID,
         actual_entity_type: String,
-        suggested_entity_type: Option<String>,
+        suggested_entity_types: Vec<String>,
     ) -> Self {
         validation_errors::UnrecognizedEntityType {
             source_loc,
             policy_id,
             actual_entity_type,
-            suggested_entity_type,
+            suggested_entity_types,
         }
         .into()
     }

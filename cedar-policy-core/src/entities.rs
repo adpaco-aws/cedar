@@ -2033,6 +2033,11 @@ mod schema_based_parsing_tests {
                 _ => Box::new(std::iter::empty()),
             }
         }
+        fn entity_type_suggestions<'a>(&'a self,
+            _etype: &EntityType,
+        ) -> Vec<String> {
+            vec![]
+        }
         fn action_entities(&self) -> Self::ActionEntityIterator {
             std::iter::empty()
         }
@@ -2070,6 +2075,11 @@ mod schema_based_parsing_tests {
                 )))),
                 _ => Box::new(std::iter::empty()),
             }
+        }
+        fn entity_type_suggestions<'a>(&'a self,
+            _etype: &EntityType,
+        ) -> Vec<String> {
+            vec![]
         }
         fn action_entities(&self) -> Self::ActionEntityIterator {
             std::iter::empty()
@@ -2958,6 +2968,123 @@ mod schema_based_parsing_tests {
         });
     }
 
+    /// Test that involves an entity type not declared in the schema
+    #[test]
+    fn unexpected_entity_type() {
+        let entitiesjson = json!(
+            [
+    {
+        "uid": { "__entity": { "type": "Xser", "id": "alice"} },
+        "attrs": {},
+        "parents": [{ "__entity": { "type": "UserGroup", "id": "jane_friends"} }]
+    },
+    {
+        "uid": { "__entity": { "type": "User", "id": "bob"} },
+        "attrs": {},
+        "parents": []
+    },
+    {
+        "uid": { "__entity": { "type": "User", "id": "tim"} },
+        "attrs": {},
+        "parents": [{ "__entity": { "type": "UserGroup", "id": "jane_friends"} }]
+    },
+    {
+        "uid": { "__entity": { "type": "UserGroup", "id": "jane_friends"} },
+        "attrs": {},
+        "parents": []
+    },
+    {
+        "uid": { "__entity": { "type": "Administrator", "id": "ahmad"} },
+        "attrs": {},
+        "parents": []
+    },
+    {
+        "uid": { "__entity": { "type": "Action", "id": "view"} },
+        "attrs": {},
+        "parents": []
+    },
+    {
+        "uid": { "__entity": { "type": "Action", "id": "comment"} },
+        "attrs": {},
+        "parents": []
+    },
+    {
+        "uid": { "__entity": { "type": "Action", "id": "edit"} },
+        "attrs": {},
+        "parents": []
+    },
+    {
+        "uid": { "__entity": { "type": "Action", "id": "delete"} },
+        "attrs": {},
+        "parents": []
+    },
+    {
+        "uid": { "__entity": { "type": "Action", "id": "listAlbums"} },
+        "attrs": {},
+        "parents": []
+    },
+    {
+        "uid": { "__entity": { "type": "Action", "id": "listPhotos"} },
+        "attrs": {},
+        "parents": []
+    },
+    {
+        "uid": { "__entity": { "type": "Photo", "id": "VacationPhoto94.jpg"} },
+        "attrs": {},
+        "parents": [{ "__entity": { "type": "Album", "id": "jane_vacation"} }]
+    },
+    {
+        "uid": { "__entity": { "type": "Photo", "id": "passportscan.jpg"} },
+        "attrs": {},
+        "parents": [{ "__entity": { "type": "Account", "id": "jane"} }]
+    },
+    {
+        "uid": { "__entity": { "type": "Video", "id": "surf.mp4"} },
+        "attrs": {},
+        "parents": [{ "__entity": { "type": "Album", "id": "jane_vacation"} }]
+    },
+    {
+        "uid": { "__entity": { "type": "Photo", "id": "selfie.jpg"} },
+        "attrs": {},
+        "parents": [{ "__entity": { "type": "Account", "id": "bob"} }]
+    },
+    {
+        "uid": { "__entity": { "type": "Album", "id": "jane_vacation"} },
+        "attrs": {},
+        "parents": [{ "__entity": { "type": "Account", "id": "jane"} }]
+    },
+    {
+        "uid": { "__entity": { "type": "Account", "id": "jane"} },
+        "attrs": {},
+        "parents": []
+    },
+    {
+        "uid": { "__entity": { "type": "Account", "id": "bob"} },
+        "attrs": {},
+        "parents": []
+    }
+]
+
+        );
+        let schema = CoreSchema::new(ValidatorSchema::from_str(schema_str));
+
+        let eparser = EntityJsonParser::new(
+            Some(&MockSchema),
+            Extensions::all_available(),
+            TCComputation::ComputeNow,
+        );
+        assert_matches!(eparser.from_json_value(entitiesjson.clone()), Err(e) => {
+            expect_err(
+                &entitiesjson,
+                &miette::Report::new(e),
+                &ExpectedErrorMessageBuilder::error("error during entity deserialization")
+                    .source(r#"entity `Xser::\"alice\"` has type `Xser` which is not declared in the schema"#)
+                    .help(r#"did you mean `User`?"#)
+                    .build()
+            );
+        });
+    }
+
     #[cfg(all(feature = "decimal", feature = "ipaddr"))]
     /// Test that involves parents of wrong types
     #[test]
@@ -3321,6 +3448,11 @@ mod schema_based_parsing_tests {
                     ))),
                     _ => Box::new(std::iter::empty()),
                 }
+            }
+            fn entity_type_suggestions<'a>(&'a self,
+                _etype: &EntityType,
+            ) -> Vec<String> {
+                vec![]
             }
             fn action_entities(&self) -> Self::ActionEntityIterator {
                 std::iter::empty()

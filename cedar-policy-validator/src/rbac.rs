@@ -27,9 +27,7 @@ use cedar_policy_core::{
 use std::{collections::HashSet, sync::Arc};
 
 use crate::{
-    expr_iterator::{policy_entity_type_names, policy_entity_uids},
-    validation_errors::unrecognized_action_id_help,
-    ValidationError,
+    expr_iterator::{policy_entity_type_names, policy_entity_uids}, fuzzy_match::fuzzy_search_vec, validation_errors::unrecognized_action_id_help, ValidationError
 };
 
 use super::{fuzzy_match::fuzzy_search, schema::*, Validator};
@@ -54,13 +52,13 @@ impl Validator {
 
             if !name.is_action() && !is_known_entity_type {
                 let actual_entity_type = name.to_string();
-                let suggested_entity_type =
-                    fuzzy_search(&actual_entity_type, known_entity_types.as_slice());
+                let suggested_entity_types =
+                    fuzzy_search_vec(&actual_entity_type, known_entity_types.as_slice());
                 Some(ValidationError::unrecognized_entity_type(
                     name.loc().cloned(),
                     template.id().clone(),
                     actual_entity_type,
-                    suggested_entity_type,
+                    suggested_entity_types,
                 ))
             } else {
                 None
@@ -111,13 +109,13 @@ impl Validator {
             let entity_type = euid.entity_type();
             if !self.schema.is_known_entity_type(entity_type) {
                 let actual_entity_type = entity_type.to_string();
-                let suggested_entity_type =
-                    fuzzy_search(&actual_entity_type, known_entity_types.as_slice());
+                let suggested_entity_types =
+                    fuzzy_search_vec(&actual_entity_type, known_entity_types.as_slice());
                 Some(ValidationError::unrecognized_entity_type(
                     None,
                     policy_id.clone(),
                     actual_entity_type,
-                    suggested_entity_type,
+                    suggested_entity_types,
                 ))
             } else {
                 None

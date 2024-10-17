@@ -283,9 +283,7 @@ impl<'e, 's, S: Schema> EntityJsonParser<'e, 's, S> {
                     EntitySchemaInfo::NoSchema
                 } else {
                     EntitySchemaInfo::NonAction(schema.entity_type(etype).ok_or_else(|| {
-                        let suggested_types = schema
-                            .entity_types_with_basename(&etype.name().basename())
-                            .collect();
+                        let suggested_types = schema.entity_type_suggestions(etype);
                         JsonDeserializationError::EntitySchemaConformance(
                             UnexpectedEntityTypeError {
                                 uid: uid.clone(),

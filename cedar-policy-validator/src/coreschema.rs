@@ -15,6 +15,7 @@
  */
 
 use crate::{ValidatorEntityType, ValidatorSchema};
+use cedar_policy_core::ast::EntityType;
 use cedar_policy_core::extensions::{ExtensionFunctionLookupError, Extensions};
 use cedar_policy_core::{ast, entities};
 use miette::Diagnostic;
@@ -76,6 +77,26 @@ impl<'a> entities::Schema for CoreSchema<'a> {
                     }
                 }),
         )
+    }
+
+    fn entity_type_suggestions<'b>(&'b self,
+        etype: &EntityType,
+    ) -> Vec<String> {
+        let basename = &etype.name().basename();
+        // let type_id = &;
+        let entity_types_with_basename: Vec<EntityType> = self.entity_types_with_basename(basename).collect();
+        let entity_types_with_what: Vec<EntityType> = self.schema
+            .entity_types()
+            .filter_map(move |(entity_type, _)| {
+            // if entity_type == etype {
+                Some(entity_type.clone())
+            // } else {
+                // None
+            // }
+        }).collect();
+        println!("basename: {basename:?}");
+        println!("{entity_types_with_basename:?}");
+        vec!["lol".to_string()]
     }
 
     fn action_entities(&self) -> Self::ActionEntityIterator {

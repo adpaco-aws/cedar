@@ -18,7 +18,7 @@ use std::collections::BTreeMap;
 
 use super::{json::err::TypeMismatchError, EntityTypeDescription, Schema, SchemaType};
 use crate::ast::{
-    BorrowedRestrictedExpr, Entity, PartialValue, PartialValueToRestrictedExprError, RestrictedExpr,
+    BorrowedRestrictedExpr, Entity, EntityType, PartialValue, PartialValueToRestrictedExprError, RestrictedExpr
 };
 use crate::entities::ExprKind;
 use crate::extensions::{ExtensionFunctionLookupError, Extensions};
@@ -61,11 +61,17 @@ impl<'a, S: Schema> EntitySchemaConformanceChecker<'a, S> {
                 ));
             }
         } else {
+            // fn entity_types_suggestions(schema: &impl Schema) -> Vec<String> {
+            //     schema.entity_types_with_basename(basename)
+            // }
+            println!("lol");
             let schema_etype = self.schema.entity_type(etype).ok_or_else(|| {
-                let suggested_types = self
-                    .schema
-                    .entity_types_with_basename(&etype.name().basename())
-                    .collect();
+                let suggested_types = self.schema.entity_type_suggestions(etype);
+                // let entity_types_same_basename = self
+                //     .schema
+                //     .entity_types_with_basename(&etype.name().basename())
+                //     .collect();
+            //     let entity_types_diff_basename = entity_types_suggestion(self.schema);
                 UnexpectedEntityTypeError {
                     uid: uid.clone(),
                     suggested_types,

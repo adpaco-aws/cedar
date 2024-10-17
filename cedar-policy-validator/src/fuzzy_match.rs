@@ -14,6 +14,8 @@
  * limitations under the License.
  */
 
+use itertools::Itertools;
+
 /// Fuzzy string matching using the Levenshtein distance algorithm
 pub fn fuzzy_search(key: &str, lst: &[impl AsRef<str>]) -> Option<String> {
     if key.is_empty() || lst.is_empty() {
@@ -30,6 +32,19 @@ pub fn fuzzy_search(key: &str, lst: &[impl AsRef<str>]) -> Option<String> {
         Some(t.1.to_owned())
     }
 }
+
+pub fn fuzzy_search_vec(key: &str, lst: &[impl AsRef<str>]) -> Vec<String> {
+    if key.is_empty() || lst.is_empty() {
+        vec![]
+    } else {
+        let t = lst.iter().map(|word| {
+            let dist = levenshtein_distance(key, word.as_ref());
+            (dist, word.as_ref()) }
+        );
+        t.sorted_by(|a, b| Ord::cmp(&b.0, &a.0)).take(3).map(|(_, word)| word.to_owned()).collect()
+    }
+}
+
 pub fn levenshtein_distance(word1: &str, word2: &str) -> usize {
     let w1 = word1.chars().collect::<Vec<_>>();
     let w2 = word2.chars().collect::<Vec<_>>();

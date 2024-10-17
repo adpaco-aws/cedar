@@ -38,7 +38,6 @@ use smol_str::SmolStr;
 
 /// Structure containing details about an unrecognized entity type error.
 #[derive(Debug, Clone, Error, Hash, Eq, PartialEq)]
-// #[error(error_in_policy!("unrecognized entity type `{actual_entity_type}`"))]
 #[error("for policy `{policy_id}`, unrecognized entity type `{actual_entity_type}`")]
 pub struct UnrecognizedEntityType {
     /// Source location
@@ -49,16 +48,20 @@ pub struct UnrecognizedEntityType {
     pub actual_entity_type: String,
     /// An entity type from the schema that the user might reasonably have
     /// intended to write.
-    pub suggested_entity_type: Option<String>,
+    pub suggested_entity_types: Vec<String>,
 }
 
 impl Diagnostic for UnrecognizedEntityType {
     impl_diagnostic_from_source_loc_opt_field!(source_loc);
 
     fn help<'a>(&'a self) -> Option<Box<dyn std::fmt::Display + 'a>> {
-        match &self.suggested_entity_type {
-            Some(s) => Some(Box::new(format!("did you mean `{s}`?"))),
-            None => None,
+        match self.suggested_entity_types.as_slice() {
+            [] => None,
+            [ty] => Some(Box::new(format!("did you mean `{ty}`?"))),
+            tys => Some(Box::new(format!(
+                "did you mean one of {:?}?",
+                tys.iter().map(ToString::to_string).collect::<Vec<String>>()
+            ))),
         }
     }
 }

@@ -262,7 +262,7 @@ pub struct UnexpectedEntityTypeError {
     /// Entity that had the unexpected type
     pub uid: EntityUID,
     /// Suggested similar entity types that actually are declared in the schema (if any)
-    pub suggested_types: Vec<EntityType>,
+    pub suggested_types: Vec<String>,
 }
 
 impl Diagnostic for UnexpectedEntityTypeError {

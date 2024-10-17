@@ -46,6 +46,10 @@ pub trait Schema {
         basename: &'a UnreservedId,
     ) -> Box<dyn Iterator<Item = EntityType> + 'a>;
 
+    fn entity_type_suggestions<'a>(&'a self,
+        etype: &EntityType,
+    ) -> Vec<String>;
+
     /// Get all the actions declared in the schema
     fn action_entities(&self) -> Self::ActionEntityIterator;
 }
@@ -67,6 +71,11 @@ impl Schema for NoEntitiesSchema {
         _basename: &'a UnreservedId,
     ) -> Box<dyn Iterator<Item = EntityType> + 'a> {
         Box::new(std::iter::empty())
+    }
+    fn entity_type_suggestions<'a>(&'a self,
+        _etype: &EntityType,
+    ) -> Vec<String> {
+        vec![]
     }
     fn action_entities(&self) -> std::iter::Empty<Arc<Entity>> {
         std::iter::empty()
@@ -106,6 +115,11 @@ impl Schema for AllEntitiesNoAttrsSchema {
         Box::new(std::iter::once(EntityType::from(Name::unqualified_name(
             basename.clone(),
         ))))
+    }
+    fn entity_type_suggestions<'a>(&'a self,
+        _etype: &EntityType,
+    ) -> Vec<String> {
+        vec![]
     }
     fn action_entities(&self) -> std::iter::Empty<Arc<Entity>> {
         std::iter::empty()
