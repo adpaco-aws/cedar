@@ -6214,6 +6214,7 @@ mod version_tests {
 mod reserved_keywords_in_policies {
     use super::*;
     use cool_asserts::assert_matches;
+    use lazy_static::lazy_static;
 
     const RESERVED_IDENTS: [&str; 9] = [
         "true", "false", "if", "then", "else", "in", "like", "has", "is",
@@ -6229,6 +6230,21 @@ mod reserved_keywords_in_policies {
         "when",
         "unless",
     ];
+
+    lazy_static! {
+        static ref METHOD_SUGGESTIONS: HashMap<&'static str, &'static str> = {
+            let mut map = HashMap::with_capacity(OTHER_SPECIAL_IDENTS.len());
+            map.insert("principal", "isIpv6");
+            map.insert("action", "isIpv6");
+            map.insert("resource", "lessThan");
+            map.insert("context", "isIpv6");
+            map.insert("permit", "isIpv6");
+            map.insert("forbid", "isIpv6");
+            map.insert("when", "isIpv6");
+            map.insert("unless", "isIpv6");
+            map
+        };
+    }
 
     const RESERVED_IDENT_MSG: fn(&str) -> String =
         |id| format!("this identifier is reserved and cannot be used: {id}");
@@ -6450,10 +6466,12 @@ mod reserved_keywords_in_policies {
                 format!("extension::function::{id}(\"foo\")"),
                 format!("did you mean `decimal`?"),
             );
-            assert_invalid_expression(
+            let suggestion = METHOD_SUGGESTIONS[id];
+            assert_invalid_expression_with_help(
                 format!("context.{id}(1)"),
                 format!("`{id}` is not a valid method"),
                 format!("context.{id}(1)"),
+                format!("did you mean `{suggestion}`?"),
             );
         }
     }
