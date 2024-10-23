@@ -6214,7 +6214,6 @@ mod version_tests {
 mod reserved_keywords_in_policies {
     use super::*;
     use cool_asserts::assert_matches;
-    use lazy_static::lazy_static;
 
     const RESERVED_IDENTS: [&str; 9] = [
         "true", "false", "if", "then", "else", "in", "like", "has", "is",
@@ -6230,44 +6229,6 @@ mod reserved_keywords_in_policies {
         "when",
         "unless",
     ];
-
-    lazy_static! {
-        static ref FUNCTION_SUGGESTIONS: HashMap<&'static str, &'static str> = {
-            let mut map = HashMap::with_capacity(OTHER_SPECIAL_IDENTS.len());
-            map.insert("principal", "decimal");
-            map.insert("action", "decimal");
-            #[cfg(not(feature = "experimental"))]
-            {
-                map.insert("resource", "decimal");
-                map.insert("context", "decimal");
-                map.insert("forbid", "decimal");
-                map.insert("when", "decimal");
-            }
-            #[cfg(feature = "experimental")]
-            {
-                map.insert("resource", "unknown");
-                map.insert("context", "unknown");
-                map.insert("forbid", "unknown");
-                map.insert("when", "unknown");
-            }
-            map.insert("permit", "decimal");
-            map.insert("unless", "decimal");
-            map
-        };
-
-        static ref METHOD_SUGGESTIONS: HashMap<&'static str, &'static str> = {
-            let mut map = HashMap::with_capacity(OTHER_SPECIAL_IDENTS.len());
-            map.insert("principal", "isIpv6");
-            map.insert("action", "isIpv6");
-            map.insert("resource", "lessThan");
-            map.insert("context", "isIpv6");
-            map.insert("permit", "isIpv6");
-            map.insert("forbid", "isIpv6");
-            map.insert("when", "isIpv6");
-            map.insert("unless", "isIpv6");
-            map
-        };
-    }
 
     const RESERVED_IDENT_MSG: fn(&str) -> String =
         |id| format!("this identifier is reserved and cannot be used: {id}");
@@ -6482,19 +6443,15 @@ mod reserved_keywords_in_policies {
         }
 
         for id in OTHER_SPECIAL_IDENTS.into_iter() {
-            let function_suggestion = FUNCTION_SUGGESTIONS[id];
-            assert_invalid_expression_with_help(
+            assert_invalid_expression(
                 format!("extension::function::{id}(\"foo\")"),
                 format!("`extension::function::{id}` is not a valid function"),
                 format!("extension::function::{id}(\"foo\")"),
-                format!("did you mean `{function_suggestion}`?"),
             );
-            let method_suggestion = METHOD_SUGGESTIONS[id];
-            assert_invalid_expression_with_help(
+            assert_invalid_expression(
                 format!("context.{id}(1)"),
                 format!("`{id}` is not a valid method"),
                 format!("context.{id}(1)"),
-                format!("did you mean `{method_suggestion}`?"),
             );
         }
     }
