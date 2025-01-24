@@ -790,6 +790,24 @@ mod tests {
             parse_datetime(s).unwrap(),
             NaiveDateTime::from_str("2024-10-15T23:12:02").unwrap()
         );
+        // 1. the last leap second - test fails
+        // assert!(parse_datetime("2016-12-31T23:59:60Z").is_ok());
+        // 2. an "invalid" leap second - test fails
+        // assert!(parse_datetime("2017-06-30T23:59:60Z").is_ok());
+        // 3. an invalid minute - test fails
+        // assert!(parse_datetime("2017-06-30T23:60:00Z").is_ok());
+        // 4. the CET timezone offset (UTC+01:00) - test passes
+        assert!(parse_datetime("2016-12-31T00:00:00+0100").is_ok());
+        // 5. a negative zero timezone offset (not permitted) - test passes
+        assert!(parse_datetime("2016-12-31T00:00:00-0000").is_ok());
+        // 6. a general timezone offset - test passes
+        assert!(parse_datetime("2016-12-31T00:00:00+1159").is_ok());
+        // 7. a general timezone offset - test fails
+        // assert!(parse_datetime("2016-12-31T00:00:00+1500").is_ok());
+        // 8. a general timezone offset with a "leap minute" - test fails
+        // assert!(parse_datetime("2016-12-31T00:00:00+2360").is_ok());
+        // 9. a general timezone offset with out-of-range values - test fails
+        // assert!(parse_datetime("2016-12-31T00:00:00+2490").is_ok());
     }
 
     #[test]
