@@ -808,6 +808,10 @@ mod tests {
         // assert!(parse_datetime("2016-12-31T00:00:00+2360").is_ok());
         // 9. a general timezone offset with out-of-range values - test fails
         // assert!(parse_datetime("2016-12-31T00:00:00+2490").is_ok());
+        // 10. a valid date since 2024 is a leap year - test passes
+        assert!(parse_datetime("2024-02-29").is_ok());
+        // 11. an invalid date (ranges are valid) - test fails
+        // assert!(parse_datetime("2025-02-31").is_ok());
     }
 
     #[test]
