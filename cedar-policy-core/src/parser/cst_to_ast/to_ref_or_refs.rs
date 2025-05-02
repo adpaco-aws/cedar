@@ -33,9 +33,9 @@ use crate::parser::{
 /// in the policy scope.
 trait RefKind: Sized {
     fn err_str() -> &'static str;
-    fn create_single_ref(e: EntityUID) -> Result<Self>;
-    fn create_multiple_refs(loc: &Loc) -> Result<fn(Vec<EntityUID>) -> Self>;
-    fn create_slot(loc: &Loc) -> Result<Self>;
+    fn create_single_ref(e: EntityUID) -> Result<Self, ParseErrors>;
+    fn create_multiple_refs(loc: &Loc) -> Result<fn(Vec<EntityUID>) -> Self, ParseErrors>;
+    fn create_slot(loc: &Loc) -> Result<Self, ParseErrors>;
     #[cfg(feature = "tolerant-ast")]
     fn error_node() -> Self;
 }
@@ -46,11 +46,11 @@ impl RefKind for SingleEntity {
         "an entity uid"
     }
 
-    fn create_single_ref(e: EntityUID) -> Result<Self> {
+    fn create_single_ref(e: EntityUID) -> Result<Self, ParseErrors> {
         Ok(SingleEntity(e))
     }
 
-    fn create_multiple_refs(loc: &Loc) -> Result<fn(Vec<EntityUID>) -> Self> {
+    fn create_multiple_refs(loc: &Loc) -> Result<fn(Vec<EntityUID>) -> Self, ParseErrors> {
         Err(ToASTError::new(
             ToASTErrorKind::wrong_entity_argument_one_expected(
                 err::parse_errors::Ref::Single,
@@ -61,7 +61,7 @@ impl RefKind for SingleEntity {
         .into())
     }
 
-    fn create_slot(loc: &Loc) -> Result<Self> {
+    fn create_slot(loc: &Loc) -> Result<Self, ParseErrors> {
         Err(ToASTError::new(
             ToASTErrorKind::wrong_entity_argument_one_expected(
                 err::parse_errors::Ref::Single,
@@ -82,15 +82,15 @@ impl RefKind for EntityReference {
         "an entity uid or matching template slot"
     }
 
-    fn create_slot(loc: &Loc) -> Result<Self> {
+    fn create_slot(loc: &Loc) -> Result<Self, ParseErrors> {
         Ok(EntityReference::Slot(Some(loc.clone())))
     }
 
-    fn create_single_ref(e: EntityUID) -> Result<Self> {
+    fn create_single_ref(e: EntityUID) -> Result<Self, ParseErrors> {
         Ok(EntityReference::euid(Arc::new(e)))
     }
 
-    fn create_multiple_refs(loc: &Loc) -> Result<fn(Vec<EntityUID>) -> Self> {
+    fn create_multiple_refs(loc: &Loc) -> Result<fn(Vec<EntityUID>) -> Self, ParseErrors> {
         Err(ToASTError::new(
             ToASTErrorKind::wrong_entity_argument_two_expected(
                 err::parse_errors::Ref::Single,
@@ -119,7 +119,7 @@ impl RefKind for OneOrMultipleRefs {
         "an entity uid or set of entity uids"
     }
 
-    fn create_slot(loc: &Loc) -> Result<Self> {
+    fn create_slot(loc: &Loc) -> Result<Self, ParseErrors> {
         Err(ToASTError::new(
             ToASTErrorKind::wrong_entity_argument_two_expected(
                 err::parse_errors::Ref::Single,
@@ -131,11 +131,11 @@ impl RefKind for OneOrMultipleRefs {
         .into())
     }
 
-    fn create_single_ref(e: EntityUID) -> Result<Self> {
+    fn create_single_ref(e: EntityUID) -> Result<Self, ParseErrors> {
         Ok(OneOrMultipleRefs::Single(e))
     }
 
-    fn create_multiple_refs(_loc: &Loc) -> Result<fn(Vec<EntityUID>) -> Self> {
+    fn create_multiple_refs(_loc: &Loc) -> Result<fn(Vec<EntityUID>) -> Self, ParseErrors> {
         fn create_multiple_refs(es: Vec<EntityUID>) -> OneOrMultipleRefs {
             OneOrMultipleRefs::Multiple(es)
         }
@@ -150,7 +150,7 @@ impl RefKind for OneOrMultipleRefs {
 impl Node<Option<cst::Expr>> {
     /// Extract a single `EntityUID` from this expression. The expression must
     /// be exactly a single entity literal expression.
-    pub fn to_ref(&self, var: ast::Var) -> Result<EntityUID> {
+    pub fn to_ref(&self, var: ast::Var) -> Result<EntityUID, ParseErrors> {
         self.to_ref_or_refs::<SingleEntity>(var, TolerantAstSetting::NotTolerant)
             .map(|x| x.0)
     }
@@ -158,7 +158,7 @@ impl Node<Option<cst::Expr>> {
     /// Extract a single `EntityUID` from this expression. The expression must
     /// be exactly a single entity literal expression.
     #[cfg(feature = "tolerant-ast")]
-    pub fn to_ref_tolerant_ast(&self, var: ast::Var) -> Result<EntityUID> {
+    pub fn to_ref_tolerant_ast(&self, var: ast::Var) -> Result<EntityUID, ParseErrors> {
         self.to_ref_or_refs::<SingleEntity>(var, TolerantAstSetting::Tolerant)
             .map(|x| x.0)
     }
@@ -166,7 +166,7 @@ impl Node<Option<cst::Expr>> {
     /// Extract a single `EntityUID` or a template slot from this expression.
     /// The expression must be exactly a single entity literal expression or
     /// a single template slot.
-    pub fn to_ref_or_slot(&self, var: ast::Var) -> Result<EntityReference> {
+    pub fn to_ref_or_slot(&self, var: ast::Var) -> Result<EntityReference, ParseErrors> {
         self.to_ref_or_refs::<EntityReference>(var, TolerantAstSetting::NotTolerant)
     }
 
@@ -174,7 +174,7 @@ impl Node<Option<cst::Expr>> {
     /// The expression must be exactly a single entity literal expression or
     /// a single template slot.
     #[cfg(feature = "tolerant-ast")]
-    pub fn to_ref_or_slot_tolerant_ast(&self, var: ast::Var) -> Result<EntityReference> {
+    pub fn to_ref_or_slot_tolerant_ast(&self, var: ast::Var) -> Result<EntityReference, ParseErrors> {
         self.to_ref_or_refs::<EntityReference>(var, TolerantAstSetting::Tolerant)
     }
 
@@ -182,7 +182,7 @@ impl Node<Option<cst::Expr>> {
     /// expression. The expression must either be exactly a single entity
     /// literal expression a single set literal expression, containing some
     /// number of entity literals.
-    pub fn to_refs(&self, var: ast::Var) -> Result<OneOrMultipleRefs> {
+    pub fn to_refs(&self, var: ast::Var) -> Result<OneOrMultipleRefs, ParseErrors> {
         self.to_ref_or_refs::<OneOrMultipleRefs>(var, TolerantAstSetting::NotTolerant)
     }
 
@@ -191,7 +191,7 @@ impl Node<Option<cst::Expr>> {
     /// literal expression a single set literal expression, containing some
     /// number of entity literals.
     #[cfg(feature = "tolerant-ast")]
-    pub fn to_refs_tolerant_ast(&self, var: ast::Var) -> Result<OneOrMultipleRefs> {
+    pub fn to_refs_tolerant_ast(&self, var: ast::Var) -> Result<OneOrMultipleRefs, ParseErrors> {
         self.to_ref_or_refs::<OneOrMultipleRefs>(var, TolerantAstSetting::Tolerant)
     }
 
@@ -199,7 +199,7 @@ impl Node<Option<cst::Expr>> {
         &self,
         var: ast::Var,
         tolerant_setting: TolerantAstSetting,
-    ) -> Result<T> {
+    ) -> Result<T, ParseErrors> {
         let expr_opt = self.try_as_inner()?;
 
         let expr = match expr_opt {
@@ -230,7 +230,7 @@ impl Node<Option<cst::Primary>> {
         &self,
         var: ast::Var,
         tolerant_setting: TolerantAstSetting,
-    ) -> Result<T> {
+    ) -> Result<T, ParseErrors> {
         let prim = self.try_as_inner()?;
 
         match prim {
@@ -325,7 +325,7 @@ impl Node<Option<cst::Member>> {
         &self,
         var: ast::Var,
         tolerant_setting: TolerantAstSetting,
-    ) -> Result<T> {
+    ) -> Result<T, ParseErrors> {
         let mem = self.try_as_inner()?;
 
         match mem.access.len() {
@@ -342,7 +342,7 @@ impl Node<Option<cst::Unary>> {
         &self,
         var: ast::Var,
         tolerant_setting: TolerantAstSetting,
-    ) -> Result<T> {
+    ) -> Result<T, ParseErrors> {
         let unary = self.try_as_inner()?;
 
         match &unary.op {
@@ -363,7 +363,7 @@ impl Node<Option<cst::Mult>> {
         &self,
         var: ast::Var,
         tolerant_setting: TolerantAstSetting,
-    ) -> Result<T> {
+    ) -> Result<T, ParseErrors> {
         let mult = self.try_as_inner()?;
 
         match mult.extended.len() {
@@ -384,7 +384,7 @@ impl Node<Option<cst::Add>> {
         &self,
         var: ast::Var,
         tolerant_setting: TolerantAstSetting,
-    ) -> Result<T> {
+    ) -> Result<T, ParseErrors> {
         let add = self.try_as_inner()?;
 
         match add.extended.len() {
@@ -401,7 +401,7 @@ impl Node<Option<cst::Relation>> {
         &self,
         var: ast::Var,
         tolerant_setting: TolerantAstSetting,
-    ) -> Result<T> {
+    ) -> Result<T, ParseErrors> {
         let rel = self.try_as_inner()?;
 
         match rel {
@@ -445,7 +445,7 @@ impl Node<Option<cst::Or>> {
         &self,
         var: ast::Var,
         tolerant_ast: TolerantAstSetting,
-    ) -> Result<T> {
+    ) -> Result<T, ParseErrors> {
         let or = self.try_as_inner()?;
 
         match or.extended.len() {
@@ -466,7 +466,7 @@ impl Node<Option<cst::And>> {
         &self,
         var: ast::Var,
         tolerant_setting: TolerantAstSetting,
-    ) -> Result<T> {
+    ) -> Result<T, ParseErrors> {
         let and = self.try_as_inner()?;
 
         match and.extended.len() {

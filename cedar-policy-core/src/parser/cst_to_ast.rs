@@ -54,6 +54,7 @@ use smol_str::{SmolStr, ToSmolStr};
 use std::cmp::Ordering;
 use std::collections::{BTreeMap, HashSet};
 use std::mem;
+use std::result::Result;
 use std::sync::Arc;
 
 /// Defines the function `cst::Expr::to_ref_or_refs` and other similar functions
@@ -61,9 +62,6 @@ use std::sync::Arc;
 /// extract entity uids from expressions that appear in the policy scope.
 mod to_ref_or_refs;
 use to_ref_or_refs::OneOrMultipleRefs;
-
-/// Type alias for convenience
-type Result<T> = std::result::Result<T, ParseErrors>;
 
 // for storing extension function names per callstyle
 struct ExtStyles<'a> {
@@ -107,7 +105,7 @@ impl Node<Option<cst::Policies>> {
     /// corresponding generated `PolicyID`s
     pub fn with_generated_policyids(
         &self,
-    ) -> Result<impl Iterator<Item = (ast::PolicyID, &Node<Option<cst::Policy>>)>> {
+    ) -> Result<impl Iterator<Item = (ast::PolicyID, &Node<Option<cst::Policy>>)>, ParseErrors> {
         let policies = self.try_as_inner()?;
 
         Ok(policies
@@ -118,7 +116,7 @@ impl Node<Option<cst::Policies>> {
     }
 
     /// convert `cst::Policies` to `ast::PolicySet`
-    pub fn to_policyset(&self) -> Result<ast::PolicySet> {
+    pub fn to_policyset(&self) -> Result<ast::PolicySet, ParseErrors> {
         let mut pset = ast::PolicySet::new();
         let mut all_errs: Vec<ParseErrors> = vec![];
         // Caution: `parser::parse_policyset_and_also_return_policy_text()`
@@ -163,7 +161,7 @@ impl Node<Option<cst::Policies>> {
 
     /// convert `cst::Policies` to `ast::PolicySet`
     #[cfg(feature = "tolerant-ast")]
-    pub fn to_policyset_tolerant(&self) -> Result<ast::PolicySet> {
+    pub fn to_policyset_tolerant(&self) -> Result<ast::PolicySet, ParseErrors> {
         let mut pset = ast::PolicySet::new();
         let mut all_errs: Vec<ParseErrors> = vec![];
         // Caution: `parser::parse_policyset_and_also_return_policy_text()`
@@ -210,14 +208,14 @@ impl Node<Option<cst::Policies>> {
 impl Node<Option<cst::Policy>> {
     /// Convert `cst::Policy` to `ast::Template`. Works for static policies as
     /// well, which will become templates with 0 slots
-    pub fn to_template(&self, id: ast::PolicyID) -> Result<ast::Template> {
+    pub fn to_template(&self, id: ast::PolicyID) -> Result<ast::Template, ParseErrors> {
         self.to_policy_template(id)
     }
 
     /// Convert `cst::Policy` to `ast::Template`. Works for static policies as
     /// well, which will become templates with 0 slots
     #[cfg(feature = "tolerant-ast")]
-    pub fn to_template_tolerant(&self, id: ast::PolicyID) -> Result<ast::Template> {
+    pub fn to_template_tolerant(&self, id: ast::PolicyID) -> Result<ast::Template, ParseErrors> {
         self.to_policy_template_tolerant(id)
     }
 
@@ -225,7 +223,7 @@ impl Node<Option<cst::Policy>> {
     pub fn to_policy_or_template(
         &self,
         id: ast::PolicyID,
-    ) -> Result<Either<ast::StaticPolicy, ast::Template>> {
+    ) -> Result<Either<ast::StaticPolicy, ast::Template>, ParseErrors> {
         let t = self.to_policy_template(id)?;
         if t.slots().count() == 0 {
             // PANIC SAFETY: A `Template` with no slots will successfully convert to a `StaticPolicy`
@@ -242,7 +240,7 @@ impl Node<Option<cst::Policy>> {
     pub fn to_policy_or_template_tolerant(
         &self,
         id: ast::PolicyID,
-    ) -> Result<Either<ast::StaticPolicy, ast::Template>> {
+    ) -> Result<Either<ast::StaticPolicy, ast::Template>, ParseErrors> {
         let t = self.to_policy_template_tolerant(id)?;
         if t.slots().count() == 0 {
             // PANIC SAFETY: A `Template` with no slots will successfully convert to a `StaticPolicy`
@@ -255,7 +253,7 @@ impl Node<Option<cst::Policy>> {
     }
 
     /// Convert `cst::Policy` to an AST `StaticPolicy`. (Will fail if the CST is for a template)
-    pub fn to_policy(&self, id: ast::PolicyID) -> Result<ast::StaticPolicy> {
+    pub fn to_policy(&self, id: ast::PolicyID) -> Result<ast::StaticPolicy, ParseErrors> {
         let maybe_template = self.to_policy_template(id);
         let maybe_policy = maybe_template.map(ast::StaticPolicy::try_from);
         match maybe_policy {
@@ -291,7 +289,7 @@ impl Node<Option<cst::Policy>> {
 
     /// Convert `cst::Policy` to `ast::Template`. Works for static policies as
     /// well, which will become templates with 0 slots
-    pub fn to_policy_template(&self, id: ast::PolicyID) -> Result<ast::Template> {
+    pub fn to_policy_template(&self, id: ast::PolicyID) -> Result<ast::Template, ParseErrors> {
         let policy = self.try_as_inner()?;
         let policy = match policy {
             cst::Policy::Policy(policy_impl) => policy_impl,
@@ -356,7 +354,7 @@ impl Node<Option<cst::Policy>> {
     /// These cannot be evaluated
     /// Should ONLY be used to examine a partially constructed AST from invalid Cedar
     #[cfg(feature = "tolerant-ast")]
-    pub fn to_policy_tolerant(&self, id: ast::PolicyID) -> Result<ast::StaticPolicy> {
+    pub fn to_policy_tolerant(&self, id: ast::PolicyID) -> Result<ast::StaticPolicy, ParseErrors> {
         let maybe_template = self.to_policy_template_tolerant(id);
         let maybe_policy = maybe_template.map(ast::StaticPolicy::try_from);
         match maybe_policy {
@@ -396,7 +394,7 @@ impl Node<Option<cst::Policy>> {
     /// These cannot be evaluated
     /// Should ONLY be used to examine a partially constructed AST from invalid Cedar
     #[cfg(feature = "tolerant-ast")]
-    pub fn to_policy_template_tolerant(&self, id: ast::PolicyID) -> Result<ast::Template> {
+    pub fn to_policy_template_tolerant(&self, id: ast::PolicyID) -> Result<ast::Template, ParseErrors> {
         let policy = self.try_as_inner()?;
         let policy = match policy {
             cst::Policy::Policy(policy_impl) => policy_impl,
@@ -453,7 +451,7 @@ impl cst::PolicyImpl {
     /// Get the scope constraints from the `cst::Policy`
     pub fn extract_scope(
         &self,
-    ) -> Result<(PrincipalConstraint, ActionConstraint, ResourceConstraint)> {
+    ) -> Result<(PrincipalConstraint, ActionConstraint, ResourceConstraint), ParseErrors> {
         // Tracks where the last variable in the scope ended. We'll point to
         // this position to indicate where to fill in vars if we're missing one.
         let mut end_of_last_var = self.effect.loc.end();
@@ -519,7 +517,7 @@ impl cst::PolicyImpl {
     #[cfg(feature = "tolerant-ast")]
     pub fn extract_scope_tolerant_ast(
         &self,
-    ) -> Result<(PrincipalConstraint, ActionConstraint, ResourceConstraint)> {
+    ) -> Result<(PrincipalConstraint, ActionConstraint, ResourceConstraint), ParseErrors> {
         // Tracks where the last variable in the scope ended. We'll point to
         // this position to indicate where to fill in vars if we're missing one.
         let mut end_of_last_var = self.effect.loc.end();
@@ -585,7 +583,7 @@ impl cst::PolicyImpl {
     pub fn get_ast_annotations<T>(
         &self,
         annotation_constructor: impl Fn(Option<SmolStr>, &Loc) -> T,
-    ) -> Result<BTreeMap<ast::AnyId, T>> {
+    ) -> Result<BTreeMap<ast::AnyId, T>, ParseErrors> {
         let mut annotations = BTreeMap::new();
         let mut all_errs: Vec<ParseErrors> = vec![];
         for node in self.annotations.iter() {
@@ -625,7 +623,7 @@ impl Node<Option<cst::Annotation>> {
     pub fn to_kv_pair<T>(
         &self,
         annotation_constructor: impl Fn(Option<SmolStr>, &Loc) -> T,
-    ) -> Result<(ast::AnyId, T)> {
+    ) -> Result<(ast::AnyId, T), ParseErrors> {
         let anno = self.try_as_inner()?;
 
         let maybe_key = anno.key.to_any_ident();
@@ -650,12 +648,12 @@ impl Node<Option<cst::Annotation>> {
 
 impl Node<Option<cst::Ident>> {
     /// Convert `cst::Ident` to `ast::UnreservedId`. Fails for reserved or invalid identifiers
-    pub(crate) fn to_unreserved_ident(&self) -> Result<ast::UnreservedId> {
+    pub(crate) fn to_unreserved_ident(&self) -> Result<ast::UnreservedId, ParseErrors> {
         self.to_valid_ident()
             .and_then(|id| id.try_into().map_err(|err| self.to_ast_err(err).into()))
     }
     /// Convert `cst::Ident` to `ast::Id`. Fails for reserved or invalid identifiers
-    pub fn to_valid_ident(&self) -> Result<ast::Id> {
+    pub fn to_valid_ident(&self) -> Result<ast::Id, ParseErrors> {
         let ident = self.try_as_inner()?;
 
         match ident {
@@ -682,7 +680,7 @@ impl Node<Option<cst::Ident>> {
     /// (It does fail for invalid identifiers, but there are no invalid
     /// identifiers at the time of this writing; see notes on
     /// [`cst::Ident::Invalid`])
-    pub fn to_any_ident(&self) -> Result<ast::AnyId> {
+    pub fn to_any_ident(&self) -> Result<ast::AnyId, ParseErrors> {
         let ident = self.try_as_inner()?;
 
         match ident {
@@ -693,7 +691,7 @@ impl Node<Option<cst::Ident>> {
         }
     }
 
-    pub(crate) fn to_effect(&self) -> Result<ast::Effect> {
+    pub(crate) fn to_effect(&self) -> Result<ast::Effect, ParseErrors> {
         let effect = self.try_as_inner()?;
 
         match effect {
@@ -707,7 +705,7 @@ impl Node<Option<cst::Ident>> {
 
     /// Returns `Ok(true)` if the condition is "when" and `Ok(false)` if the
     /// condition is "unless"
-    pub(crate) fn to_cond_is_when(&self) -> Result<bool> {
+    pub(crate) fn to_cond_is_when(&self) -> Result<bool, ParseErrors> {
         let cond = self.try_as_inner()?;
 
         match cond {
@@ -719,7 +717,7 @@ impl Node<Option<cst::Ident>> {
         }
     }
 
-    fn to_var(&self) -> Result<ast::Var> {
+    fn to_var(&self) -> Result<ast::Var, ParseErrors> {
         let ident = self.try_as_inner()?;
 
         match ident {
@@ -739,7 +737,7 @@ impl ast::UnreservedId {
         e: Build::Expr,
         args: Vec<Build::Expr>,
         loc: &Loc,
-    ) -> Result<Build::Expr> {
+    ) -> Result<Build::Expr, ParseErrors> {
         let builder = Build::new().with_source_loc(loc);
         match self.as_ref() {
             "contains" => extract_single_argument(args.into_iter(), "contains", loc)
@@ -811,7 +809,7 @@ fn extract_single_argument<T>(
     args: impl ExactSizeIterator<Item = T>,
     fn_name: &'static str,
     loc: &Loc,
-) -> Result<T> {
+) -> Result<T, ParseErrors> {
     args.exactly_one().map_err(|args| {
         ParseErrors::singleton(ToASTError::new(
             ToASTErrorKind::wrong_arity(fn_name, 1, args.len()),
@@ -825,7 +823,7 @@ fn require_zero_arguments<T>(
     args: &impl ExactSizeIterator<Item = T>,
     fn_name: &'static str,
     loc: &Loc,
-) -> Result<()> {
+) -> Result<(), ParseErrors> {
     match args.len() {
         0 => Ok(()),
         n => Err(ParseErrors::singleton(ToASTError::new(
@@ -852,7 +850,7 @@ impl Node<Option<cst::VariableDef>> {
     fn to_principal_constraint(
         &self,
         tolerant_setting: TolerantAstSetting,
-    ) -> Result<PrincipalConstraint> {
+    ) -> Result<PrincipalConstraint, ParseErrors> {
         match self.to_principal_or_resource_constraint(ast::Var::Principal, tolerant_setting)? {
             PrincipalOrResource::Principal(p) => Ok(p),
             PrincipalOrResource::Resource(_) => Err(self
@@ -867,7 +865,7 @@ impl Node<Option<cst::VariableDef>> {
     fn to_resource_constraint(
         &self,
         tolerant_setting: TolerantAstSetting,
-    ) -> Result<ResourceConstraint> {
+    ) -> Result<ResourceConstraint, ParseErrors> {
         match self.to_principal_or_resource_constraint(ast::Var::Resource, tolerant_setting)? {
             PrincipalOrResource::Principal(_) => Err(self
                 .to_ast_err(ToASTErrorKind::IncorrectVariable {
@@ -883,7 +881,7 @@ impl Node<Option<cst::VariableDef>> {
         &self,
         expected: ast::Var,
         tolerant_ast: TolerantAstSetting,
-    ) -> Result<PrincipalOrResource> {
+    ) -> Result<PrincipalOrResource, ParseErrors> {
         let vardef = self.try_as_inner()?;
         let var = vardef.variable.to_var()?;
 
@@ -952,7 +950,7 @@ impl Node<Option<cst::VariableDef>> {
     fn to_action_constraint(
         &self,
         tolerant_setting: TolerantAstSetting,
-    ) -> Result<ast::ActionConstraint> {
+    ) -> Result<ast::ActionConstraint, ParseErrors> {
         let vardef = self.try_as_inner()?;
 
         match vardef.variable.to_var() {
@@ -1041,7 +1039,7 @@ impl Node<Option<cst::Cond>> {
     /// `true` if the cond is a `when` clause, `false` if it is an `unless`
     /// clause. (The returned `expr` is already adjusted for this, the `bool` is
     /// for information only.)
-    fn to_expr<Build: ExprBuilder>(&self) -> Result<(Build::Expr, bool)> {
+    fn to_expr<Build: ExprBuilder>(&self) -> Result<(Build::Expr, bool), ParseErrors> {
         let cond = self.try_as_inner()?;
         let is_when = cond.cond.to_cond_is_when()?;
 
@@ -1080,7 +1078,7 @@ impl Node<Option<cst::Cond>> {
 }
 
 impl Node<Option<cst::Str>> {
-    pub(crate) fn as_valid_string(&self) -> Result<&SmolStr> {
+    pub(crate) fn as_valid_string(&self) -> Result<&SmolStr, ParseErrors> {
         let id = self.try_as_inner()?;
 
         match id {
@@ -1097,7 +1095,7 @@ impl Node<Option<cst::Str>> {
 fn build_ast_error_node_if_possible<Build: ExprBuilder>(
     error: ParseErrors,
     loc: Option<&Loc>,
-) -> Result<Build::Expr> {
+) -> Result<Build::Expr, ParseErrors> {
     let res = Build::new().with_maybe_source_loc(loc).error(error.clone());
     match res {
         Ok(r) => Ok(r),
@@ -1110,7 +1108,7 @@ fn build_ast_error_node_if_possible<Build: ExprBuilder>(
 fn convert_expr_error_to_parse_error<Build: ExprBuilder>(
     error: ParseErrors,
     loc: Option<&Loc>,
-) -> Result<Build::Expr> {
+) -> Result<Build::Expr, ParseErrors> {
     #[cfg(feature = "tolerant-ast")]
     return build_ast_error_node_if_possible::<Build>(error, loc);
     #[allow(unreachable_code)]
@@ -1155,7 +1153,7 @@ where
         ToASTError::new(kind.into(), self.loc().clone())
     }
 
-    fn into_expr<Build: ExprBuilder<Expr = Expr>>(self) -> Result<Expr> {
+    fn into_expr<Build: ExprBuilder<Expr = Expr>>(self) -> Result<Expr, ParseErrors> {
         match self {
             Self::Expr { expr, .. } => Ok(expr),
             Self::Var { var, loc } => Ok(Build::new().with_source_loc(&loc).var(var)),
@@ -1180,7 +1178,7 @@ where
     }
 
     /// Variables, names (with no prefixes), and string literals can all be used as record attributes
-    pub(crate) fn into_valid_attr(self) -> Result<SmolStr> {
+    pub(crate) fn into_valid_attr(self) -> Result<SmolStr, ParseErrors> {
         match self {
             Self::Var { var, .. } => Ok(construct_string_from_var(var)),
             Self::Name { name, loc } => name.into_valid_attr(loc),
@@ -1207,7 +1205,7 @@ where
         }
     }
 
-    pub(crate) fn into_pattern(self) -> Result<Vec<PatternElem>> {
+    pub(crate) fn into_pattern(self) -> Result<Vec<PatternElem>, ParseErrors> {
         match &self {
             Self::StrLit { lit, .. } => to_pattern(lit).map_err(|escape_errs| {
                 ParseErrors::new_from_nonempty(
@@ -1229,7 +1227,7 @@ where
         }
     }
     /// to string literal
-    fn into_string_literal(self) -> Result<SmolStr> {
+    fn into_string_literal(self) -> Result<SmolStr, ParseErrors> {
         match &self {
             Self::StrLit { lit, .. } => to_unescaped_string(lit).map_err(|escape_errs| {
                 ParseErrors::new_from_nonempty(
@@ -1252,12 +1250,12 @@ where
     }
 
     /// Returns `Err` if `self` is not an `ast::EntityType`. The `Err` will give you the `self` reference back
-    fn into_entity_type(self) -> std::result::Result<ast::EntityType, Self> {
+    fn into_entity_type(self) -> Result<ast::EntityType, Self> {
         self.into_name().map(ast::EntityType::from)
     }
 
     /// Returns `Err` if `self` is not an `ast::Name`. The `Err` will give you the `self` reference back
-    fn into_name(self) -> std::result::Result<ast::Name, Self> {
+    fn into_name(self) -> Result<ast::Name, Self> {
         match self {
             Self::Var { var, .. } => Ok(ast::Name::unqualified_name(var.into())),
             Self::Name { name, .. } => Ok(name),
@@ -1268,12 +1266,12 @@ where
 
 impl Node<Option<cst::Expr>> {
     /// convert `cst::Expr` to `ast::Expr`
-    pub fn to_expr<Build: ExprBuilder>(&self) -> Result<Build::Expr> {
+    pub fn to_expr<Build: ExprBuilder>(&self) -> Result<Build::Expr, ParseErrors> {
         self.to_expr_or_special::<Build>()?.into_expr::<Build>()
     }
     pub(crate) fn to_expr_or_special<Build: ExprBuilder>(
         &self,
-    ) -> Result<ExprOrSpecial<'_, Build::Expr>> {
+    ) -> Result<ExprOrSpecial<'_, Build::Expr>, ParseErrors> {
         let expr_opt = self.try_as_inner()?;
 
         let expr = match expr_opt {
@@ -1306,7 +1304,7 @@ impl Node<Option<cst::Expr>> {
 }
 
 impl Node<Option<cst::Or>> {
-    fn to_expr_or_special<Build: ExprBuilder>(&self) -> Result<ExprOrSpecial<'_, Build::Expr>> {
+    fn to_expr_or_special<Build: ExprBuilder>(&self) -> Result<ExprOrSpecial<'_, Build::Expr>, ParseErrors> {
         let or = self.try_as_inner()?;
 
         let maybe_first = or.initial.to_expr_or_special::<Build>();
@@ -1327,10 +1325,10 @@ impl Node<Option<cst::Or>> {
 }
 
 impl Node<Option<cst::And>> {
-    pub(crate) fn to_expr<Build: ExprBuilder>(&self) -> Result<Build::Expr> {
+    pub(crate) fn to_expr<Build: ExprBuilder>(&self) -> Result<Build::Expr, ParseErrors> {
         self.to_expr_or_special::<Build>()?.into_expr::<Build>()
     }
-    fn to_expr_or_special<Build: ExprBuilder>(&self) -> Result<ExprOrSpecial<'_, Build::Expr>> {
+    fn to_expr_or_special<Build: ExprBuilder>(&self) -> Result<ExprOrSpecial<'_, Build::Expr>, ParseErrors> {
         let and = self.try_as_inner()?;
 
         let maybe_first = and.initial.to_expr_or_special::<Build>();
@@ -1353,10 +1351,10 @@ impl Node<Option<cst::And>> {
 }
 
 impl Node<Option<cst::Relation>> {
-    fn to_expr<Build: ExprBuilder>(&self) -> Result<Build::Expr> {
+    fn to_expr<Build: ExprBuilder>(&self) -> Result<Build::Expr, ParseErrors> {
         self.to_expr_or_special::<Build>()?.into_expr::<Build>()
     }
-    fn to_expr_or_special<Build: ExprBuilder>(&self) -> Result<ExprOrSpecial<'_, Build::Expr>> {
+    fn to_expr_or_special<Build: ExprBuilder>(&self) -> Result<ExprOrSpecial<'_, Build::Expr>, ParseErrors> {
         let rel = self.try_as_inner()?;
 
         match rel {
@@ -1449,7 +1447,7 @@ impl Node<Option<cst::Relation>> {
 }
 
 impl Node<Option<cst::Add>> {
-    fn to_expr<Build: ExprBuilder>(&self) -> Result<Build::Expr> {
+    fn to_expr<Build: ExprBuilder>(&self) -> Result<Build::Expr, ParseErrors> {
         self.to_expr_or_special::<Build>()?.into_expr::<Build>()
     }
 
@@ -1464,13 +1462,13 @@ impl Node<Option<cst::Add>> {
     // despite producing deadcode.
     pub(crate) fn to_has_rhs<Build: ExprBuilder>(
         &self,
-    ) -> Result<Either<SmolStr, NonEmpty<UnreservedId>>> {
+    ) -> Result<Either<SmolStr, NonEmpty<UnreservedId>>, ParseErrors> {
         let inner @ cst::Add { initial, extended } = self.try_as_inner()?;
         let err = |loc| {
             ToASTError::new(ToASTErrorKind::InvalidHasRHS(inner.to_string().into()), loc).into()
         };
         let construct_attrs =
-            |first, rest: &[Node<Option<cst::MemAccess>>]| -> Result<NonEmpty<UnreservedId>> {
+            |first, rest: &[Node<Option<cst::MemAccess>>]| -> Result<NonEmpty<UnreservedId>, ParseErrors> {
                 let mut acc = nonempty![first];
                 rest.iter().try_for_each(|ma_node| {
                     let ma = ma_node.try_as_inner()?;
@@ -1558,7 +1556,7 @@ impl Node<Option<cst::Add>> {
 
     pub(crate) fn to_expr_or_special<Build: ExprBuilder>(
         &self,
-    ) -> Result<ExprOrSpecial<'_, Build::Expr>> {
+    ) -> Result<ExprOrSpecial<'_, Build::Expr>, ParseErrors> {
         let add = self.try_as_inner()?;
 
         let maybe_first = add.initial.to_expr_or_special::<Build>();
@@ -1584,10 +1582,10 @@ impl Node<Option<cst::Add>> {
 }
 
 impl Node<Option<cst::Mult>> {
-    fn to_expr<Build: ExprBuilder>(&self) -> Result<Build::Expr> {
+    fn to_expr<Build: ExprBuilder>(&self) -> Result<Build::Expr, ParseErrors> {
         self.to_expr_or_special::<Build>()?.into_expr::<Build>()
     }
-    fn to_expr_or_special<Build: ExprBuilder>(&self) -> Result<ExprOrSpecial<'_, Build::Expr>> {
+    fn to_expr_or_special<Build: ExprBuilder>(&self) -> Result<ExprOrSpecial<'_, Build::Expr>, ParseErrors> {
         let mult = self.try_as_inner()?;
 
         let maybe_first = mult.initial.to_expr_or_special::<Build>();
@@ -1618,10 +1616,10 @@ impl Node<Option<cst::Mult>> {
 }
 
 impl Node<Option<cst::Unary>> {
-    fn to_expr<Build: ExprBuilder>(&self) -> Result<Build::Expr> {
+    fn to_expr<Build: ExprBuilder>(&self) -> Result<Build::Expr, ParseErrors> {
         self.to_expr_or_special::<Build>()?.into_expr::<Build>()
     }
-    fn to_expr_or_special<Build: ExprBuilder>(&self) -> Result<ExprOrSpecial<'_, Build::Expr>> {
+    fn to_expr_or_special<Build: ExprBuilder>(&self) -> Result<ExprOrSpecial<'_, Build::Expr>, ParseErrors> {
         let unary = self.try_as_inner()?;
 
         match unary.op {
@@ -1733,7 +1731,7 @@ impl Node<Option<cst::Member>> {
         head: Build::Expr,
         next: &mut AstAccessor<Build::Expr>,
         tail: &'a mut [AstAccessor<Build::Expr>],
-    ) -> Result<(Build::Expr, &'a mut [AstAccessor<Build::Expr>])> {
+    ) -> Result<(Build::Expr, &'a mut [AstAccessor<Build::Expr>]), ParseErrors> {
         use AstAccessor::*;
         match (next, tail) {
             // trying to "call" an expression as a function like `(1 + 1)("foo")`. Always an error.
@@ -1770,7 +1768,7 @@ impl Node<Option<cst::Member>> {
         }
     }
 
-    fn to_expr_or_special<Build: ExprBuilder>(&self) -> Result<ExprOrSpecial<'_, Build::Expr>> {
+    fn to_expr_or_special<Build: ExprBuilder>(&self) -> Result<ExprOrSpecial<'_, Build::Expr>, ParseErrors> {
         let mem = self.try_as_inner()?;
 
         let maybe_prim = mem.item.to_expr_or_special::<Build>();
@@ -1885,7 +1883,7 @@ impl Node<Option<cst::Member>> {
 }
 
 impl Node<Option<cst::MemAccess>> {
-    fn to_access<Build: ExprBuilder>(&self) -> Result<AstAccessor<Build::Expr>> {
+    fn to_access<Build: ExprBuilder>(&self) -> Result<AstAccessor<Build::Expr>, ParseErrors> {
         let acc = self.try_as_inner()?;
 
         match acc {
@@ -1906,10 +1904,10 @@ impl Node<Option<cst::MemAccess>> {
 }
 
 impl Node<Option<cst::Primary>> {
-    pub(crate) fn to_expr<Build: ExprBuilder>(&self) -> Result<Build::Expr> {
+    pub(crate) fn to_expr<Build: ExprBuilder>(&self) -> Result<Build::Expr, ParseErrors> {
         self.to_expr_or_special::<Build>()?.into_expr::<Build>()
     }
-    fn to_expr_or_special<Build: ExprBuilder>(&self) -> Result<ExprOrSpecial<'_, Build::Expr>> {
+    fn to_expr_or_special<Build: ExprBuilder>(&self) -> Result<ExprOrSpecial<'_, Build::Expr>, ParseErrors> {
         let prim = self.try_as_inner()?;
 
         match prim {
@@ -1972,7 +1970,7 @@ impl Node<Option<cst::Primary>> {
     }
 
     /// convert `cst::Primary` representing a string literal to a `SmolStr`.
-    pub fn to_string_literal<Build: ExprBuilder>(&self) -> Result<SmolStr> {
+    pub fn to_string_literal<Build: ExprBuilder>(&self) -> Result<SmolStr, ParseErrors> {
         let prim = self.try_as_inner()?;
 
         match prim {
@@ -1985,7 +1983,7 @@ impl Node<Option<cst::Primary>> {
 }
 
 impl Node<Option<cst::Slot>> {
-    fn into_expr<Build: ExprBuilder>(self) -> Result<Build::Expr> {
+    fn into_expr<Build: ExprBuilder>(self) -> Result<Build::Expr, ParseErrors> {
         match self.try_as_inner()?.try_into() {
             Ok(slot_id) => Ok(Build::new().with_source_loc(&self.loc).slot(slot_id)),
             Err(e) => Err(self.to_ast_err(e).into()),
@@ -1996,7 +1994,7 @@ impl Node<Option<cst::Slot>> {
 impl TryFrom<&cst::Slot> for ast::SlotId {
     type Error = ToASTErrorKind;
 
-    fn try_from(slot: &cst::Slot) -> std::result::Result<Self, Self::Error> {
+    fn try_from(slot: &cst::Slot) -> Result<Self, Self::Error> {
         match slot {
             cst::Slot::Principal => Ok(ast::SlotId::principal()),
             cst::Slot::Resource => Ok(ast::SlotId::resource()),
@@ -2016,19 +2014,19 @@ impl From<ast::SlotId> for cst::Slot {
 
 impl Node<Option<cst::Name>> {
     /// Build type constraints
-    fn to_type_constraint<Build: ExprBuilder>(&self) -> Result<Build::Expr> {
+    fn to_type_constraint<Build: ExprBuilder>(&self) -> Result<Build::Expr, ParseErrors> {
         match self.as_inner() {
             Some(_) => Err(self.to_ast_err(ToASTErrorKind::TypeConstraints).into()),
             None => Ok(Build::new().with_source_loc(&self.loc).val(true)),
         }
     }
 
-    pub(crate) fn to_name(&self) -> Result<ast::Name> {
+    pub(crate) fn to_name(&self) -> Result<ast::Name, ParseErrors> {
         self.to_internal_name()
             .and_then(|n| n.try_into().map_err(ParseErrors::singleton))
     }
 
-    pub(crate) fn to_internal_name(&self) -> Result<ast::InternalName> {
+    pub(crate) fn to_internal_name(&self) -> Result<ast::InternalName, ParseErrors> {
         let name = self.try_as_inner()?;
 
         let maybe_path = ParseErrors::transpose(name.path.iter().map(|i| i.to_valid_ident()));
@@ -2082,7 +2080,7 @@ pub(crate) fn is_known_extension_func_str(s: &SmolStr) -> bool {
 
 impl ast::Name {
     /// Convert the `Name` into a `String` attribute, which fails if it had any namespaces
-    fn into_valid_attr(self, loc: Loc) -> Result<SmolStr> {
+    fn into_valid_attr(self, loc: Loc) -> Result<SmolStr, ParseErrors> {
         if !self.0.path.is_empty() {
             Err(ToASTError::new(ToASTErrorKind::PathAsAttribute(self.to_string()), loc).into())
         } else {
@@ -2094,7 +2092,7 @@ impl ast::Name {
         self,
         args: Vec<Build::Expr>,
         loc: Loc,
-    ) -> Result<Build::Expr> {
+    ) -> Result<Build::Expr, ParseErrors> {
         // error on standard methods
         if self.0.path.is_empty() {
             let id = self.basename();
@@ -2134,7 +2132,7 @@ impl ast::Name {
 
 impl Node<Option<cst::Ref>> {
     /// convert `cst::Ref` to `ast::EntityUID`
-    pub fn to_ref(&self) -> Result<ast::EntityUID> {
+    pub fn to_ref(&self) -> Result<ast::EntityUID, ParseErrors> {
         let refr = self.try_as_inner()?;
 
         match refr {
@@ -2160,14 +2158,14 @@ impl Node<Option<cst::Ref>> {
                 .into()),
         }
     }
-    fn to_expr<Build: ExprBuilder>(&self) -> Result<Build::Expr> {
+    fn to_expr<Build: ExprBuilder>(&self) -> Result<Build::Expr, ParseErrors> {
         self.to_ref()
             .map(|euid| Build::new().with_source_loc(&self.loc).val(euid))
     }
 }
 
 impl Node<Option<cst::Literal>> {
-    fn to_expr_or_special<Build: ExprBuilder>(&self) -> Result<ExprOrSpecial<'_, Build::Expr>> {
+    fn to_expr_or_special<Build: ExprBuilder>(&self) -> Result<ExprOrSpecial<'_, Build::Expr>, ParseErrors> {
         let lit = self.try_as_inner()?;
 
         match lit {
@@ -2200,7 +2198,7 @@ impl Node<Option<cst::Literal>> {
 }
 
 impl Node<Option<cst::RecInit>> {
-    fn to_init<Build: ExprBuilder>(&self) -> Result<(SmolStr, Build::Expr)> {
+    fn to_init<Build: ExprBuilder>(&self) -> Result<(SmolStr, Build::Expr), ParseErrors> {
         let lit = self.try_as_inner()?;
 
         let maybe_attr = lit.0.to_expr_or_special::<Build>()?.into_valid_attr();
@@ -2270,7 +2268,7 @@ fn construct_expr_rel<Build: ExprBuilder>(
     rel: cst::RelOp,
     s: Build::Expr,
     loc: Loc,
-) -> Result<Build::Expr> {
+) -> Result<Build::Expr, ParseErrors> {
     let builder = Build::new().with_source_loc(&loc);
     match rel {
         cst::RelOp::Less => Ok(builder.less(f, s)),
