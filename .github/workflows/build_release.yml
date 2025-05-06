@@ -22,7 +22,12 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - run: rustup update ${{ matrix.toolchain }} && rustup default ${{ matrix.toolchain }}
-      - run: sudo apt-get install protobuf-compiler
+      - name: Install protobuf (Ubuntu)
+        if: matrix.os == 'ubuntu-latest'
+        run: sudo apt-get install protobuf-compiler
+      - name: Install protobuf (macOS)
+        if: startsWith(matrix.os, 'macos')
+        run: brew install protobuf
       - run: cargo build --release --all-features
       - uses: actions/upload-artifact@v4
         with:
