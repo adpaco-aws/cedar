@@ -327,6 +327,7 @@ dependencies = [
  "lalrpop",
  "lalrpop-util",
  "lazy_static",
+ "logos",
  "miette",
  "nonempty",
  "ref-cast",

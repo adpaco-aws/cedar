@@ -22,66 +22,138 @@ use lalrpop_util::{ParseError, ErrorRecovery};
 use crate::parser::*;
 use crate::parser::err::{RawErrorRecovery, RawUserError};
 use crate::parser::node::Node;
+use crate::parser::tokens::CedarToken;
 
 /// `errors` collects generated errors.
 ///
 /// `src` is the (full) original source being parsed, which the source locations l,r index into.
-grammar<'err, 's>(errors: &'err mut Vec<RawErrorRecovery<'input>>, src: &'s Arc<str>);
+grammar<'input, 'err, 's>(errors: &'err mut Vec<RawErrorRecovery<'input>>, src: &'s Arc<str>);
 
 extern {
     type Error = RawUserError;
+    type Location = usize;
+
+    enum CedarToken {
+        // Whitespace and comments
+        // r"\s*" => { }, // The default whitespace skipping is disabled an `ignore pattern` is specified
+        // r"//[^\n\r]*[\n\r]*" => { }, // Skip `// comments`
+
+        // Special Identifiers (begin expressions)
+        "true" => CedarToken::True,
+        "false" => CedarToken::False,
+        "if" => CedarToken::If,
+
+        // Common Identifiers
+        "permit" => CedarToken::Permit,
+        "forbid" => CedarToken::Forbid,
+        "when" => CedarToken::When,
+        "unless" => CedarToken::Unless,
+        "in" => CedarToken::In,
+        "has" => CedarToken::Has,
+        "like" => CedarToken::Like,
+        "is" => CedarToken::Is,
+        "then" => CedarToken::Then,
+        "else" => CedarToken::Else,
+
+        // main idents
+        "principal" => CedarToken::Principal,
+        "action" => CedarToken::Action,
+        "resource" => CedarToken::Resource,
+        "context" => CedarToken::Context,
+
+        // Valid slots, hardcoded for now, may be generalized later
+        "?principal" => CedarToken::PrincipalSlot,
+        "?resource" => CedarToken::ResourceSlot,
+        "?slot" => CedarToken::OtherSlot(<SmolStr>),
+
+        // data input
+        "identifier" => CedarToken::Identifier(<SmolStr>),
+        // The `NUMBER` token is a positive integer.
+        // Negative number literals are negation operations.
+        "number" => CedarToken::Number(<SmolStr>),
+        "string_lit" => CedarToken::StringLit(<SmolStr>),
+
+        // other tokens used (or not currently used, in the case of e.g. % and =)
+        "@" => CedarToken::At,
+        "." => CedarToken::Dot,
+        "," => CedarToken::Comma,
+        ";" => CedarToken::SemiColon,
+        ":" => CedarToken::Colon,
+        "::" => CedarToken::DoubleColon,
+        "(" => CedarToken::LParen,
+        ")" => CedarToken::RParen, 
+        "{" => CedarToken::LBrace,
+        "}" => CedarToken::RBrace,
+        "[" => CedarToken::LBracket,
+        "]" => CedarToken::RBracket,
+        "==" => CedarToken::Equal,
+        "!=" => CedarToken::NotEqual,
+        "<" => CedarToken::Lt,
+        "<=" => CedarToken::Le,
+        ">=" => CedarToken::Ge,
+        ">" => CedarToken::Gt,
+        "||" => CedarToken::Or,
+         "&&" => CedarToken::And,
+        "+" => CedarToken::Add,
+        "-" => CedarToken::Dash,
+        "*" => CedarToken::Mul,
+        "/" => CedarToken::Div,
+        "%" => CedarToken::Modulo,
+        "!" => CedarToken::Neg,
+        "=" => CedarToken::Assign,
+    }
 }
 
-match {
-    // Whitespace and comments
-    r"\s*" => { }, // The default whitespace skipping is disabled an `ignore pattern` is specified
-    r"//[^\n\r]*[\n\r]*" => { }, // Skip `// comments`
+// match {
+//     // Whitespace and comments
+//     r"\s*" => { }, // The default whitespace skipping is disabled an `ignore pattern` is specified
+//     r"//[^\n\r]*[\n\r]*" => { }, // Skip `// comments`
 
-    // Special Identifiers (begin expressions)
-    "true" => TRUE,
-    "false" => FALSE,
-    "if" => IF,
+//     // Special Identifiers (begin expressions)
+//     "true" => CedarToken::True,
+//     "false" => FALSE,
+//     "if" => IF,
 
-    // Common Identifiers
-    "permit" => PERMIT,
-    "forbid" => FORBID,
-    "when" => WHEN,
-    "unless" => UNLESS,
-    "in" => IN,
-    "has" => HAS,
-    "like" => LIKE,
-    "is" => IS,
-    "then" => THEN,
-    "else" => ELSE,
+//     // Common Identifiers
+//     "permit" => PERMIT,
+//     "forbid" => FORBID,
+//     "when" => WHEN,
+//     "unless" => UNLESS,
+//     "in" => IN,
+//     "has" => HAS,
+//     "like" => LIKE,
+//     "is" => IS,
+//     "then" => THEN,
+//     "else" => ELSE,
 
-    // main idents
-    "principal" => PRINCIPAL,
-    "action" => ACTION,
-    "resource" => RESOURCE,
-    "context" => CONTEXT,
+//     // main idents
+//     "principal" => PRINCIPAL,
+//     "action" => ACTION,
+//     "resource" => RESOURCE,
+//     "context" => CONTEXT,
 
-    // Valid slots, hardcoded for now, may be generalized later
-    "?principal" => PRINCIPAL_SLOT,
-    "?resource" => RESOURCE_SLOT,
-    r"\?[_a-zA-Z][_a-zA-Z0-9]*" => OTHER_SLOT,
+//     // Valid slots, hardcoded for now, may be generalized later
+//     "?principal" => PRINCIPAL_SLOT,
+//     "?resource" => RESOURCE_SLOT,
+//     r"\?[_a-zA-Z][_a-zA-Z0-9]*" => OTHER_SLOT,
 
-    // data input
-    r"[_a-zA-Z][_a-zA-Z0-9]*" => IDENTIFIER,
-    // The `NUMBER` token is a positive integer.
-    // Negative number literals are negation operations.
-    r"[0-9]+" => NUMBER,
-    r#""(\\.|[^"\\])*""# => STRINGLIT,
+//     // data input
+//     r"[_a-zA-Z][_a-zA-Z0-9]*" => IDENTIFIER,
+//     // The `NUMBER` token is a positive integer.
+//     // Negative number literals are negation operations.
+//     r"[0-9]+" => NUMBER,
+//     r#""(\\.|[^"\\])*""# => STRINGLIT,
 
-    // other tokens used (or not currently used, in the case of e.g. % and =)
-    "@",
-    ".", ",", ";", ":", "::",
-    "(", ")", "{", "}", "[", "]",
-    "==", "!=", "<", "<=", ">=", ">",
-    "||", "&&",
-    "+", "-", "*", "/", "%",
-    "!",
-    "=",
-}
+//     // other tokens used (or not currently used, in the case of e.g. % and =)
+//     "@",
+//     ".", ",", ";", ":", "::",
+//     "(", ")", "{", "}", "[", "]",
+//     "==", "!=", "<", "<=", ">=", ">",
+//     "||", "&&",
+//     "+", "-", "*", "/", "%",
+//     "!",
+//     "=",
+// }
 
 Comma<E>: Vec<E> = {
     <e:E?> => e.into_iter().collect(),
@@ -129,51 +201,51 @@ pub Policy: Node<Option<cst::Policy>> = {
 // to enable better error reporting. It is parsed as an `Add` rather than an
 // `Expr` to void ambiguity with a subsequent `in`.
 VariableDef: Node<Option<cst::VariableDef>> = {
-    <l:@L> <variable: AnyIdent> <unused_type_name: (":" <Name>)?> <entity_type: (IS <Add>)?>
+    <l:@L> <variable: AnyIdent> <unused_type_name: (":" <Name>)?> <entity_type: ("is" <Add>)?>
         <ineq: (RelOp Expr)?> <r:@R>
         => Node::with_source_loc(Some(cst::VariableDef{ variable,unused_type_name,entity_type,ineq, }), Loc::new(l..r, Arc::clone(src))),
 }
 
 // Identifier, but not the special ones
 CommonIdent: Node<Option<cst::Ident>> = {
-    <l:@L> PRINCIPAL <r:@R>
+    <l:@L> "principal" <r:@R>
         => Node::with_source_loc(Some(cst::Ident::Principal), Loc::new(l..r, Arc::clone(src))),
-    <l:@L> ACTION <r:@R>
+    <l:@L> "action" <r:@R>
         => Node::with_source_loc(Some(cst::Ident::Action), Loc::new(l..r, Arc::clone(src))),
-    <l:@L> RESOURCE <r:@R>
+    <l:@L> "resource" <r:@R>
         => Node::with_source_loc(Some(cst::Ident::Resource), Loc::new(l..r, Arc::clone(src))),
-    <l:@L> CONTEXT <r:@R>
+    <l:@L> "context" <r:@R>
         => Node::with_source_loc(Some(cst::Ident::Context), Loc::new(l..r, Arc::clone(src))),
-    <l:@L> PERMIT <r:@R>
+    <l:@L> "permit" <r:@R>
         => Node::with_source_loc(Some(cst::Ident::Permit), Loc::new(l..r, Arc::clone(src))),
-    <l:@L> FORBID <r:@R>
+    <l:@L> "forbid" <r:@R>
         => Node::with_source_loc(Some(cst::Ident::Forbid), Loc::new(l..r, Arc::clone(src))),
-    <l:@L> WHEN <r:@R>
+    <l:@L> "when" <r:@R>
         => Node::with_source_loc(Some(cst::Ident::When), Loc::new(l..r, Arc::clone(src))),
-    <l:@L> UNLESS <r:@R>
+    <l:@L> "unless" <r:@R>
         => Node::with_source_loc(Some(cst::Ident::Unless), Loc::new(l..r, Arc::clone(src))),
-    <l:@L> IN <r:@R>
+    <l:@L> "in" <r:@R>
         => Node::with_source_loc(Some(cst::Ident::In), Loc::new(l..r, Arc::clone(src))),
-    <l:@L> HAS <r:@R>
+    <l:@L> "has" <r:@R>
         => Node::with_source_loc(Some(cst::Ident::Has), Loc::new(l..r, Arc::clone(src))),
-    <l:@L> LIKE <r:@R>
+    <l:@L> "like" <r:@R>
         => Node::with_source_loc(Some(cst::Ident::Like), Loc::new(l..r, Arc::clone(src))),
-    <l:@L> IS <r:@R>
+    <l:@L> "is" <r:@R>
         => Node::with_source_loc(Some(cst::Ident::Is), Loc::new(l..r, Arc::clone(src))),
-    <l:@L> THEN <r:@R>
+    <l:@L> "then" <r:@R>
         => Node::with_source_loc(Some(cst::Ident::Then), Loc::new(l..r, Arc::clone(src))),
-    <l:@L> ELSE <r:@R>
+    <l:@L> "else" <r:@R>
         => Node::with_source_loc(Some(cst::Ident::Else), Loc::new(l..r, Arc::clone(src))),
-    <l:@L> <i:IDENTIFIER> <r:@R>
+    <l:@L> <i:"identifier"> <r:@R>
         => Node::with_source_loc(Some(cst::Ident::Ident( i.into() )), Loc::new(l..r, Arc::clone(src))),
 }
 // The special ones, play multiple roles
 SpecialIdent: Node<Option<cst::Ident>> = {
-    <l:@L> IF <r:@R>
+    <l:@L> "if" <r:@R>
         => Node::with_source_loc(Some(cst::Ident::If), Loc::new(l..r, Arc::clone(src))),
-    <l:@L> TRUE <r:@R>
+    <l:@L> "true" <r:@R>
         => Node::with_source_loc(Some(cst::Ident::True), Loc::new(l..r, Arc::clone(src))),
-    <l:@L> FALSE <r:@R>
+    <l:@L> "false" <r:@R>
         => Node::with_source_loc(Some(cst::Ident::False), Loc::new(l..r, Arc::clone(src))),
 }
 #[inline]
@@ -184,7 +256,7 @@ pub Ident: Node<Option<cst::Ident>> = AnyIdent;
 
 #[inline]
 IfIdent: Node<Option<cst::Ident>> = {
-    <l:@L> IF <r:@R>
+    <l:@L> "if" <r:@R>
         => Node::with_source_loc(Some(cst::Ident::If), Loc::new(l..r, Arc::clone(src))),
 }
 
@@ -202,7 +274,7 @@ Cond: Node<Option<cst::Cond>> = {
 pub Expr: Node<Option<cst::Expr>> = {
     <l:@L> <o:Or> <r:@R>
         => Node::with_source_loc(Some(cst::Expr::Expr(cst::ExprImpl { expr: Box::new(cst::ExprData::Or(o)) })), Loc::new(l..r, Arc::clone(src))),
-    <l:@L> IF <i:Expr> THEN <t:Expr> ELSE <e:Expr> <r:@R>
+    <l:@L> "if" <i:Expr> "then" <t:Expr> "else" <e:Expr> <r:@R>
         => Node::with_source_loc(Some(cst::Expr::Expr(cst::ExprImpl { expr: Box::new(cst::ExprData::If(i,t,e)) })), Loc::new(l..r, Arc::clone(src))),
     <l:@L> <err:!> <r:@R> => { 
         // Tolerant AST creates a valid CST node representing the unparsable expression
@@ -231,13 +303,13 @@ And: Node<Option<cst::And>> = {
 Relation: Node<Option<cst::Relation>> = {
     <l:@L> <i:Add> <e:(RelOp Add)*> <r:@R>
         => Node::with_source_loc(Some(cst::Relation::Common{initial: i, extended: e}), Loc::new(l..r, Arc::clone(src))),
-    <l:@L> <t:Add> HAS <f:Add> <r:@R>
+    <l:@L> <t:Add> "has" <f:Add> <r:@R>
         => Node::with_source_loc(Some(cst::Relation::Has{target: t, field: f}), Loc::new(l..r, Arc::clone(src))),
     // The following rule exists allegedly for the sake of better error
     // reporting. RFC 62 (extended has operator) allows a sequence of
     // identifiers separated by . as RHS. Hence, we need to extend this rule to
     // `HAS IF { MemAccess }`, as opposed to the original `HAS IF`.
-    <l:@L> <t:Add> HAS <ii:IfIdent> <a:MemAccess*> <r:@R> => {
+    <l:@L> <t:Add> "has" <ii:IfIdent> <a:MemAccess*> <r:@R> => {
         // Create an add expression from this identifier
         let id1 = Node::with_source_loc(Some(cst::Name{path: vec![], name: ii}), Loc::new(l..r, Arc::clone(src)));
         let id2 = Node::with_source_loc(Some(cst::Primary::Name(id1)), Loc::new(l..r, Arc::clone(src)));
@@ -248,9 +320,9 @@ Relation: Node<Option<cst::Relation>> = {
 
         Node::with_source_loc(Some(cst::Relation::Has{target: t, field: id6}), Loc::new(l..r, Arc::clone(src)))
     },
-    <l:@L> <t:Add> LIKE <p:Add> <r:@R>
+    <l:@L> <t:Add> "like" <p:Add> <r:@R>
         => Node::with_source_loc(Some(cst::Relation::Like{target: t, pattern: p}), Loc::new(l..r, Arc::clone(src))),
-    <l:@L> <t:Add> IS <n:Add> <e: (IN <Add>)?> <r:@R>
+    <l:@L> <t:Add> "is" <n:Add> <e: ("in" <Add>)?> <r:@R>
         => Node::with_source_loc(Some(cst::Relation::IsIn{target: t, entity_type: n, in_entity: e}), Loc::new(l..r, Arc::clone(src))),
 }
 // RelOp     := '<' | '<=' | '>=' | '>' | '!=' | '==' | 'in' | '=' (the '=' is just to provide an error suggesting '==' instead)
@@ -262,7 +334,7 @@ RelOp: cst::RelOp = {
     "!=" => cst::RelOp::NotEq,
     "==" => cst::RelOp::Eq,
     "=" => cst::RelOp::InvalidSingleEq,
-    IN => cst::RelOp::In,
+    "in" => cst::RelOp::In,
 }
 AddOp: cst::AddOp = {
     "+" => cst::AddOp::Plus,
@@ -373,7 +445,7 @@ RefInit: Node<Option<cst::RefInit>> = {
 }
 // RecInit  := Expr ':' Expr   -or-   IDENT : Expr
 RecInit: Node<Option<cst::RecInit>> = {
-    <l:@L> IF ":" <e2:Expr> <r:@R>
+    <l:@L> "if" ":" <e2:Expr> <r:@R>
         => {
             // Create an expression from this identifier
             let id0 = Node::with_source_loc(Some(cst::Ident::If), Loc::new(l..r, Arc::clone(src)));
@@ -395,21 +467,21 @@ RecInit: Node<Option<cst::RecInit>> = {
 }
 
 Slot: Node<Option<cst::Slot>> = {
-    <l:@L> PRINCIPAL_SLOT <r:@R>
+    <l:@L> "?principal" <r:@R>
         => Node::with_source_loc(Some(cst::Slot::Principal), Loc::new(l..r, Arc::clone(src))),
-    <l:@L> RESOURCE_SLOT <r:@R>
+    <l:@L> "?resource" <r:@R>
         => Node::with_source_loc(Some(cst::Slot::Resource), Loc::new(l..r, Arc::clone(src))),
-    <l:@L> <s: OTHER_SLOT> <r:@R>
+    <l:@L> <s: "?slot"> <r:@R>
         => Node::with_source_loc(Some(cst::Slot::Other(s.into())), Loc::new(l..r, Arc::clone(src))),
 }
 
 // LITERAL   := BOOL | INT | STR
 Literal: Node<Option<cst::Literal>> = {
-    <l:@L> TRUE <r:@R>
+    <l:@L> "true" <r:@R>
         => Node::with_source_loc(Some(cst::Literal::True), Loc::new(l..r, Arc::clone(src))),
-    <l:@L> FALSE <r:@R>
+    <l:@L> "false" <r:@R>
         => Node::with_source_loc(Some(cst::Literal::False), Loc::new(l..r, Arc::clone(src))),
-    <l:@L> <n:NUMBER> <r:@R> =>? match u64::from_str(n) {
+    <l:@L> <n:"number"> <r:@R> =>? match u64::from_str(n.as_str()) {
         Ok(n) => Ok(Node::with_source_loc(Some(cst::Literal::Num(n)), Loc::new(l..r, Arc::clone(src)))),
         Err(e) => Err(ParseError::User {
             error: Node::with_source_loc(format!("integer parse error: {e}"), Loc::new(l..r, Arc::clone(src))),
@@ -419,6 +491,6 @@ Literal: Node<Option<cst::Literal>> = {
         => Node::with_source_loc(Some(cst::Literal::Str(s)), Loc::new(l..r, Arc::clone(src))),
 }
 Str: Node<Option<cst::Str>> = {
-    <l:@L> <s:STRINGLIT> <r:@R>
+    <l:@L> <s:"string_lit"> <r:@R>
         => Node::with_source_loc(Some(cst::Str::String(s[1..(s.len() - 1)].into())), Loc::new(l..r, Arc::clone(src))),
 }

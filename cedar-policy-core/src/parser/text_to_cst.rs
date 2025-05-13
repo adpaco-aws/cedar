@@ -31,7 +31,10 @@ lalrpop_mod!(
     "/src/parser/grammar.rs"
 );
 
-use super::*;
+use grammar::RefParser;
+use logos::Logos;
+
+use super::{tokens::CedarToken, *};
 use std::sync::Arc;
 
 /// This helper function calls a generated parser, collects errors that could be
@@ -43,22 +46,22 @@ fn parse_collect_errors<'a, P, T>(
         &P,
         &mut Vec<err::RawErrorRecovery<'a>>,
         &Arc<str>,
-        &'a str,
+        logos::Lexer<'a, CedarToken>,
     ) -> Result<T, err::RawParseError<'a>>,
-    text: &'a str,
+    text: logos::Lexer<'a, CedarToken>,
 ) -> Result<T, err::ParseErrors> {
     let mut errs = Vec::new();
-    let result = parse(parser, &mut errs, &Arc::from(text), text);
+    let result = parse(parser, &mut errs, &Arc::from(""), text);
 
     let errors = errs
         .into_iter()
-        .map(|rc| err::ToCSTError::from_raw_err_recovery(rc, Arc::from(text)))
+        .map(|rc| err::ToCSTError::from_raw_err_recovery(rc, Arc::from("")))
         .map(Into::into);
     let parsed = match result {
         Ok(parsed) => parsed,
         Err(e) => {
             return Err(err::ParseErrors::new(
-                err::ToCSTError::from_raw_parse_err(e, Arc::from(text)).into(),
+                err::ToCSTError::from_raw_parse_err(e, Arc::from("")).into(),
                 errors,
             ));
         }
@@ -113,39 +116,107 @@ lazy_static::lazy_static! {
     static ref IDENT_PARSER: grammar::IdentParser = grammar::IdentParser::new();
 }
 
+struct PositionedLexer<'input> {
+    lexer: logos::Lexer<'input, CedarToken>,
+}
+
+impl<'input> Iterator for PositionedLexer<'input> {
+    type Item = Result<(usize, CedarToken, usize), Node<String>>;
+
+    fn next(&mut self) -> Option<Self::Item> {
+        self.lexer.next().map(|token_result| {
+            // let span = self.lexer.span();
+            match token_result {
+                Ok(token) => Ok((0, token, 0)),
+                Err(()) => Err(Node::with_source_loc(String::from("Lexer error"), Loc::new(0..1, Arc::from("")))),
+            }
+        })
+    }
+}
+
 /// Create CST for multiple policies from text
 pub fn parse_policies(text: &str) -> Result<Node<Option<cst::Policies>>, err::ParseErrors> {
-    parse_collect_errors(&*POLICIES_PARSER, grammar::PoliciesParser::parse, text)
+    let lexer = CedarToken::lexer(text);
+    let positioned_lexer = PositionedLexer { lexer };
+    let mut errs = Vec::new();
+    grammar::PoliciesParser::parse(&*POLICIES_PARSER, &mut errs, &Arc::from(""), positioned_lexer).map_err(|err|err::ParseErrors::singleton(err::ToASTError::new(
+        err::ToASTErrorKind::ExpressionCall,
+        // Since we don't have a loc when doing this transformation, we create an arbitrary one
+        Loc::new(0..1, format!("{err}").into()),
+    )))
 }
 
 /// Create CST for one policy statement from text
 pub fn parse_policy(text: &str) -> Result<Node<Option<cst::Policy>>, err::ParseErrors> {
-    parse_collect_errors(&*POLICY_PARSER, grammar::PolicyParser::parse, text)
+    let lexer = CedarToken::lexer(text);
+    let positioned_lexer = PositionedLexer { lexer };
+    let mut errs = Vec::new();
+    grammar::PolicyParser::parse(&*POLICY_PARSER, &mut errs, &Arc::from(""), positioned_lexer).map_err(|_|err::ParseErrors::singleton(err::ToASTError::new(
+        err::ToASTErrorKind::ExpressionCall,
+        // Since we don't have a loc when doing this transformation, we create an arbitrary one
+        Loc::new(0..1, "CSTErrorNode".into()),
+    )))
 }
 
 /// Create CST for one Expression from text
 pub fn parse_expr(text: &str) -> Result<Node<Option<cst::Expr>>, err::ParseErrors> {
-    parse_collect_errors(&*EXPR_PARSER, grammar::ExprParser::parse, text)
+    let lexer = CedarToken::lexer(text);
+    let positioned_lexer = PositionedLexer { lexer };
+    let mut errs = Vec::new();
+    grammar::ExprParser::parse(&*EXPR_PARSER, &mut errs, &Arc::from(""), positioned_lexer).map_err(|_|err::ParseErrors::singleton(err::ToASTError::new(
+        err::ToASTErrorKind::ExpressionCall,
+        // Since we don't have a loc when doing this transformation, we create an arbitrary one
+        Loc::new(0..1, "CSTErrorNode".into()),
+    )))
 }
 
 /// Create CST for one Entity Ref (i.e., UID) from text
 pub fn parse_ref(text: &str) -> Result<Node<Option<cst::Ref>>, err::ParseErrors> {
-    parse_collect_errors(&*REF_PARSER, grammar::RefParser::parse, text)
+    let lexer = CedarToken::lexer(text);
+    let positioned_lexer = PositionedLexer { lexer };
+    let mut errs = Vec::new();
+    grammar::RefParser::parse(&*REF_PARSER, &mut errs, &Arc::from(""), positioned_lexer).map_err(|_|err::ParseErrors::singleton(err::ToASTError::new(
+        err::ToASTErrorKind::ExpressionCall,
+        // Since we don't have a loc when doing this transformation, we create an arbitrary one
+        Loc::new(0..1, "CSTErrorNode".into()),
+    )))
 }
 
 /// Create CST for one Primary value from text
 pub fn parse_primary(text: &str) -> Result<Node<Option<cst::Primary>>, err::ParseErrors> {
-    parse_collect_errors(&*PRIMARY_PARSER, grammar::PrimaryParser::parse, text)
+    let lexer = CedarToken::lexer(text);
+    let positioned_lexer = PositionedLexer { lexer };
+    let mut errs = Vec::new();
+    grammar::PrimaryParser::parse(&*PRIMARY_PARSER, &mut errs, &Arc::from(""), positioned_lexer).map_err(|_|err::ParseErrors::singleton(err::ToASTError::new(
+        err::ToASTErrorKind::ExpressionCall,
+        // Since we don't have a loc when doing this transformation, we create an arbitrary one
+        Loc::new(0..1, "CSTErrorNode".into()),
+    )))
 }
 
 /// Parse text as a Name, or fail if it does not parse as a Name
 pub fn parse_name(text: &str) -> Result<Node<Option<cst::Name>>, err::ParseErrors> {
-    parse_collect_errors(&*NAME_PARSER, grammar::NameParser::parse, text)
+    let lexer = CedarToken::lexer(text);
+    let positioned_lexer = PositionedLexer { lexer };
+    let mut errs = Vec::new();
+    grammar::NameParser::parse(&*NAME_PARSER, &mut errs, &Arc::from(""), positioned_lexer).map_err(|_|err::ParseErrors::singleton(err::ToASTError::new(
+        err::ToASTErrorKind::ExpressionCall,
+        // Since we don't have a loc when doing this transformation, we create an arbitrary one
+        Loc::new(0..1, "CSTErrorNode".into()),
+    )))
 }
+
 
 /// Parse text as an identifier, or fail if it does not parse as an identifier
 pub fn parse_ident(text: &str) -> Result<Node<Option<cst::Ident>>, err::ParseErrors> {
-    parse_collect_errors(&*IDENT_PARSER, grammar::IdentParser::parse, text)
+    let lexer = CedarToken::lexer(text);
+    let positioned_lexer = PositionedLexer { lexer };
+    let mut errs = Vec::new();
+    grammar::IdentParser::parse(&*IDENT_PARSER, &mut errs, &Arc::from(""), positioned_lexer).map_err(|_|err::ParseErrors::singleton(err::ToASTError::new(
+        err::ToASTErrorKind::ExpressionCall,
+        // Since we don't have a loc when doing this transformation, we create an arbitrary one
+        Loc::new(0..1, "CSTErrorNode".into()),
+    )))
 }
 
 /// Create CST for one policy statement from text - allows CST error nodes on certain parse failures

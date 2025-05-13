@@ -36,15 +36,15 @@ use crate::parser::node::Node;
 use crate::parser::unescape::UnescapeError;
 
 use super::cst;
+use super::tokens::CedarToken;
 
 pub(crate) type RawLocation = usize;
-pub(crate) type RawToken<'a> = lalr::lexer::Token<'a>;
 pub(crate) type RawUserError = Node<String>;
 
-pub(crate) type RawParseError<'a> = lalr::ParseError<RawLocation, RawToken<'a>, RawUserError>;
-pub(crate) type RawErrorRecovery<'a> = lalr::ErrorRecovery<RawLocation, RawToken<'a>, RawUserError>;
+pub(crate) type RawParseError<'a> = lalr::ParseError<RawLocation, CedarToken, RawUserError>;
+pub(crate) type RawErrorRecovery<'a> = lalr::ErrorRecovery<RawLocation, CedarToken, RawUserError>;
 
-type OwnedRawParseError = lalr::ParseError<RawLocation, String, RawUserError>;
+type OwnedRawParseError = lalr::ParseError<RawLocation, CedarToken, RawUserError>;
 
 /// Errors that can occur when parsing Cedar policies or expressions.
 #[derive(Clone, Debug, Diagnostic, Error, PartialEq, Eq)]
@@ -635,7 +635,7 @@ impl ToCSTError {
 
     pub(crate) fn from_raw_parse_err(err: RawParseError<'_>, src: Arc<str>) -> Self {
         Self {
-            err: err.map_token(|token| token.to_string()),
+            err: err.map_token(|token| CedarToken::Action),
             src,
         }
     }
