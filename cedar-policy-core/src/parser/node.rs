@@ -15,6 +15,7 @@
  */
 
 use std::fmt::{self, Debug, Display};
+use std::sync::Arc;
 
 use educe::Educe;
 use miette::Diagnostic;
@@ -48,6 +49,15 @@ impl<T> Node<T> {
     /// Create a new Node with optional source location
     pub fn with_maybe_source_loc(node: T, loc: Option<Loc>) -> Self {
         Node { node, loc }
+    }
+
+    pub fn make<'s>(value: T, l: usize, r: usize, src: &'s Arc<str>, is_fast: bool) -> Node<T> {
+        let loc = if is_fast {
+            None
+        } else {
+            Some(Loc::new(l..r, Arc::clone(src)))
+        };
+        Node::with_maybe_source_loc(value, loc)
     }
 
     /// Transform the inner value while retaining the attached source info.

@@ -51,7 +51,7 @@ use lalrpop_util::{ParseError, ErrorRecovery};
 /// `errors` collects generated errors.
 ///
 /// `src` is the (full) original source being parsed, which the source locations l,r index into.
-grammar<'err, 's>(errors: &'err mut Vec<RawErrorRecovery<'input>>, src: &'s Arc<str>);
+grammar<'err, 's>(errors: &'err mut Vec<RawErrorRecovery<'input>>, src: &'s Arc<str>, is_fast: bool);
 
 extern {
     type Error = UserError;
