@@ -21,9 +21,7 @@
 macro_rules! impl_diagnostic_from_source_loc_opt_field {
     ( $($id:ident).+ ) => {
         fn source_code(&self) -> Option<&dyn miette::SourceCode> {
-            self.$($id).+
-                .as_ref()
-                .map(|loc| &loc.src as &dyn miette::SourceCode)
+            $crate::SOURCE_CODE.get().map(|src| src as &dyn miette::SourceCode)
         }
 
         fn labels(&self) -> Option<Box<dyn Iterator<Item = miette::LabeledSpan> + '_>> {
@@ -43,14 +41,7 @@ macro_rules! impl_diagnostic_from_source_loc_opt_field {
 macro_rules! impl_diagnostic_from_two_source_loc_opt_fields {
     ( $i:ident , $j:ident ) => {
         fn source_code(&self) -> Option<&dyn miette::SourceCode> {
-            self.$i
-                .as_ref()
-                .map(|loc| &loc.src as &dyn miette::SourceCode)
-                .or_else(|| {
-                    self.$j
-                        .as_ref()
-                        .map(|loc| &loc.src as &dyn miette::SourceCode)
-                })
+            $crate::SOURCE_CODE.get().map(|src| src as &dyn miette::SourceCode)
         }
 
         fn labels(&self) -> Option<Box<dyn Iterator<Item = miette::LabeledSpan> + '_>> {
@@ -80,10 +71,7 @@ macro_rules! impl_diagnostic_from_two_source_loc_opt_fields {
 macro_rules! impl_diagnostic_from_method_on_field {
     ( $i:ident, $m:ident ) => {
         fn source_code(&self) -> Option<&dyn miette::SourceCode> {
-            self.$i
-                .$m()
-                .as_ref()
-                .map(|loc| &loc.src as &dyn miette::SourceCode)
+            $crate::SOURCE_CODE.get().map(|src| src as &dyn miette::SourceCode)
         }
 
         fn labels(&self) -> Option<Box<dyn Iterator<Item = miette::LabeledSpan> + '_>> {
@@ -104,11 +92,7 @@ macro_rules! impl_diagnostic_from_method_on_field {
 macro_rules! impl_diagnostic_from_method_on_nonempty_field {
     ( $i:ident, $m:ident ) => {
         fn source_code(&self) -> Option<&dyn miette::SourceCode> {
-            self.$i
-                .first()
-                .$m()
-                .as_ref()
-                .map(|loc| &loc.src as &dyn miette::SourceCode)
+            $crate::SOURCE_CODE.get().map(|src| src as &dyn miette::SourceCode)
         }
 
         fn labels(&self) -> Option<Box<dyn Iterator<Item = miette::LabeledSpan> + '_>> {

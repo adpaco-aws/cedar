@@ -18,6 +18,11 @@
 #![warn(missing_docs)]
 #![cfg_attr(feature = "wasm", allow(non_snake_case))]
 
+
+use std::sync::OnceLock;
+
+pub static SOURCE_CODE: OnceLock<&str> = OnceLock::new();
+
 #[macro_use]
 extern crate lalrpop_util;
 

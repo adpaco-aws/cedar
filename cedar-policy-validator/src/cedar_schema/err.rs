@@ -29,7 +29,7 @@ use cedar_policy_core::{
         err::{expected_to_string, ExpectedTokenConfig},
         unescape::UnescapeError,
         Loc, Node,
-    },
+    }, SOURCE_CODE,
 };
 use lalrpop_util as lalr;
 use lazy_static::lazy_static;
@@ -697,9 +697,7 @@ pub const NO_PR_HELP_MSG: &str =
 
 impl Diagnostic for NoPrincipalOrResource {
     fn source_code(&self) -> Option<&dyn miette::SourceCode> {
-        self.name_loc
-            .as_ref()
-            .map(|l| &l.src as &dyn miette::SourceCode)
+        SOURCE_CODE.get().map(|src| src as &dyn miette::SourceCode)
     }
 
     fn labels(&self) -> Option<Box<dyn Iterator<Item = miette::LabeledSpan> + '_>> {
@@ -746,7 +744,7 @@ impl Diagnostic for DuplicateNamespace {
 
 /// Error subtypes for [`SchemaWarning`]
 pub mod schema_warnings {
-    use cedar_policy_core::{impl_diagnostic_from_source_loc_opt_field, parser::Loc};
+    use cedar_policy_core::{impl_diagnostic_from_source_loc_opt_field, parser::Loc, SOURCE_CODE};
     use miette::Diagnostic;
     use smol_str::SmolStr;
     use thiserror::Error;
@@ -803,9 +801,7 @@ pub mod schema_warnings {
             // just have to pick one; we assume `entity_loc` and `common_loc`
             // have the same source code.
             // if that isn't true we'll have a confusing underline.
-            self.entity_loc
-                .as_ref()
-                .map(|loc| &loc.src as &dyn miette::SourceCode)
+            SOURCE_CODE.get().map(|src| src as &dyn miette::SourceCode)
         }
 
         fn severity(&self) -> Option<miette::Severity> {

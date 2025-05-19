@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-use crate::ast::*;
+use crate::{ast::*, SOURCE_CODE};
 use crate::parser::Loc;
 use std::collections::{BTreeMap, BTreeSet, HashSet};
 use std::str::FromStr;
@@ -305,9 +305,7 @@ impl Diagnostic for NotValue {
     }
 
     fn source_code(&self) -> Option<&dyn miette::SourceCode> {
-        match self {
-            Self::NotValue { loc } => loc.as_ref().map(|loc| &loc.src as &dyn miette::SourceCode),
-        }
+        SOURCE_CODE.get().map(|src| src as &dyn miette::SourceCode)
     }
 }
 

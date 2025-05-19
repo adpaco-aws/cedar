@@ -33,6 +33,7 @@ lalrpop_mod!(
 
 use super::*;
 use std::sync::Arc;
+use crate::SOURCE_CODE;
 
 /// This helper function calls a generated parser, collects errors that could be
 /// generated multiple ways, and returns a single Result where the error type is
@@ -42,14 +43,14 @@ fn parse_collect_errors<'a, P, T>(
     parse: impl FnOnce(
         &P,
         &mut Vec<err::RawErrorRecovery<'a>>,
-        &Arc<str>,
-        bool,
         &'a str,
     ) -> Result<T, err::RawParseError<'a>>,
     text: &'a str,
 ) -> Result<T, err::ParseErrors> {
     let mut errs = Vec::new();
-    let result = parse(parser, &mut errs, &Arc::from(text), true, text);
+    // let static_str = Box::leak(text.to_owned().into_boxed_str());
+    // let _ = SOURCE_CODE.set(static_str);
+    let result = parse(parser, &mut errs, text);
 
     let errors = errs
         .into_iter()

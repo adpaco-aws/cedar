@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-use crate::ast::*;
+use crate::{ast::*, SOURCE_CODE};
 use crate::parser::Loc;
 use annotation::{Annotation, Annotations};
 use educe::Educe;
@@ -1556,9 +1556,7 @@ impl Diagnostic for UnexpectedSlotError {
     }
 
     fn source_code(&self) -> Option<&dyn miette::SourceCode> {
-        match self {
-            Self::FoundSlot(Slot { loc, .. }) => loc.as_ref().map(|l| l as &dyn miette::SourceCode),
-        }
+        SOURCE_CODE.get().map(|src| src as &dyn miette::SourceCode)
     }
 }
 

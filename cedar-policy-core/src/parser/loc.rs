@@ -16,15 +16,14 @@
 
 use std::sync::Arc;
 
+use crate::SOURCE_CODE;
+
 /// Represents a source location: index/range, and a reference to the source
 /// code which that index/range indexes into
 #[derive(Debug, Clone, PartialEq, Eq, Hash, PartialOrd, Ord)]
 pub struct Loc {
     /// `SourceSpan` indicating a specific source code location or range
     pub span: miette::SourceSpan,
-
-    /// Original source code (which the above source span indexes into)
-    pub src: Arc<str>,
 }
 
 impl Loc {
@@ -32,7 +31,6 @@ impl Loc {
     pub fn new(span: impl Into<miette::SourceSpan>, src: Arc<str>) -> Self {
         Self {
             span: span.into(),
-            src,
         }
     }
 
@@ -40,7 +38,6 @@ impl Loc {
     pub fn span(&self, span: impl Into<miette::SourceSpan>) -> Self {
         Self {
             span: span.into(),
-            src: Arc::clone(&self.src),
         }
     }
 
@@ -58,7 +55,7 @@ impl Loc {
     /// internally consistent (its `SourceSpan` isn't a valid index into its
     /// `src`)
     pub fn snippet(&self) -> Option<&str> {
-        self.src.get(self.start()..self.end())
+        SOURCE_CODE.get().and_then(|src| src.get(self.start()..self.end()))
     }
 }
 
@@ -71,29 +68,5 @@ impl From<Loc> for miette::SourceSpan {
 impl From<&Loc> for miette::SourceSpan {
     fn from(loc: &Loc) -> Self {
         loc.span
-    }
-}
-
-impl miette::SourceCode for Loc {
-    fn read_span<'a>(
-        &'a self,
-        span: &miette::SourceSpan,
-        context_lines_before: usize,
-        context_lines_after: usize,
-    ) -> Result<Box<dyn miette::SpanContents<'a> + 'a>, miette::MietteError> {
-        self.src
-            .read_span(span, context_lines_before, context_lines_after)
-    }
-}
-
-impl miette::SourceCode for &Loc {
-    fn read_span<'a>(
-        &'a self,
-        span: &miette::SourceSpan,
-        context_lines_before: usize,
-        context_lines_after: usize,
-    ) -> Result<Box<dyn miette::SpanContents<'a> + 'a>, miette::MietteError> {
-        self.src
-            .read_span(span, context_lines_before, context_lines_after)
     }
 }
