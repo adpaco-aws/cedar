@@ -27,7 +27,9 @@ mod fmt;
 pub use fmt::join_with_conjunction;
 /// Source location struct
 mod loc;
-pub use loc::Loc;
+pub use loc::{AsLocRef, IntoMaybeLoc, Loc, MaybeLoc};
+#[macro_use]
+mod macros;
 /// Metadata wrapper for CST Nodes
 mod node;
 pub use node::Node;
@@ -59,7 +61,7 @@ pub fn parse_policyset(text: &str) -> Result<ast::PolicySet, err::ParseErrors> {
 /// appear as a key in the returned map.
 pub fn parse_policyset_and_also_return_policy_text(
     text: &str,
-) -> Result<(HashMap<ast::PolicyID, &str>, ast::PolicySet), err::ParseErrors> {
+) -> Result<(HashMap<ast::PolicyID, Option<&str>>, ast::PolicySet), err::ParseErrors> {
     let cst = text_to_cst::parse_policies(text)?;
     let pset = cst.to_policyset()?;
     // PANIC SAFETY Shouldn't be `none` since `parse_policies()` and `to_policyset()` didn't return `Err`
@@ -75,13 +77,13 @@ pub fn parse_policyset_and_also_return_policy_text(
         .with_generated_policyids()
         .expect("shouldn't be `None` since `parse_policies` and `to_policyset` didn't return `Err`")
         .map(|(id, policy)| {
-            let loc = policy
-                .loc
-                .as_ref()
-                .expect("shouldn't be `None` since we parse with locations");
-            (id, &text[loc.start()..loc.end()])
+            if let Some(loc) = &policy.loc {
+                (id, Some(&text[loc.start()..loc.end()]))
+            } else {
+                (id, None)
+            }
         })
-        .collect::<HashMap<ast::PolicyID, &str>>();
+        .collect::<HashMap<ast::PolicyID, Option<&str>>>();
     Ok((texts, pset))
 }
 
@@ -145,7 +147,11 @@ pub fn parse_template(
     let cst = text_to_cst::parse_policy(text)?;
     let template = cst.to_template(id)?;
     if template.slots().count() == 0 {
-        Err(err::ToASTError::new(err::ToASTErrorKind::expected_template(), cst.loc).into())
+        Err(err::ToASTError::new(
+            err::ToASTErrorKind::expected_template(),
+            cst.loc.into_maybe_loc(),
+        )
+        .into())
     } else {
         Ok(template)
     }
@@ -718,17 +724,17 @@ mod tests {
         assert_eq!(texts.len(), 2);
         assert_eq!(
             texts.get(&PolicyID::from_string("policy0")),
-            Some(
-                &r#"permit(principal, action, resource)
+            Some(&Some(
+                r#"permit(principal, action, resource)
             when { principal == resource.owner };"#
-            )
+            ))
         );
         assert_eq!(
             texts.get(&PolicyID::from_string("policy1")),
-            Some(
-                &r#"forbid(principal, action == Action::"modify", resource) // a comment
+            Some(&Some(
+                r#"forbid(principal, action == Action::"modify", resource) // a comment
             when { resource . highSecurity };"#
-            )
+            ))
         );
     }
 
