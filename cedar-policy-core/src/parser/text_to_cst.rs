@@ -165,12 +165,15 @@ pub fn parse_ident(text: &str) -> Result<Node<Option<cst::Ident>>, err::ParseErr
 /// Create CST for multiple policies from text, but without retaining source information
 #[cfg(feature = "raw-parsing")]
 pub fn parse_policies_raw(text: &str) -> Result<Node<Option<cst::Policies>>, err::ParseErrors> {
-    parse_collect_errors(
-        &*POLICIES_PARSER,
-        grammar::PoliciesParser::parse,
-        false,
-        text,
-    )
+    use super::combinator::parse_policy_file;
+
+    parse_policy_file(text, false)
+    // parse_collect_errors(
+    //     &*POLICIES_PARSER,
+    //     grammar::PoliciesParser::parse,
+    //     false,
+    //     text,
+    // )
 }
 
 /// Create CST for one policy statement from text, but without retaining source information

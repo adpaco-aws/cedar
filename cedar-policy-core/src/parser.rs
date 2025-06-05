@@ -16,6 +16,7 @@
 
 //! This module contains the parser for the Cedar language.
 
+mod combinator;
 /// Concrete Syntax Tree def used as parser first pass
 pub mod cst;
 /// Step two: convert CST to package AST
