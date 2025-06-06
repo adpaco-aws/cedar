@@ -5,6 +5,8 @@ use nom::{
 use smol_str::SmolStr;
 use std::sync::Arc;
 
+use super::cst;
+
 type Node<T> = super::node::Node<Option<T>>;
 
 struct ParserState<'a> {
@@ -218,7 +220,7 @@ fn parse_relation(input: &str) -> IResult<&str, Node<Relation>> {
         ),
         map(
             many0(tuple((ws(parse_rel_op), parse_add))),
-            |extended| Relation::Common { initial, extended },
+            |extended| Relation::Common { initial: initial.clone(), extended },
         ),
     ));
 
@@ -452,7 +454,7 @@ fn parse_ref(input: &str) -> IResult<&str, Node<Ref>> {
     let mut parser = alt((
         map(
             parse_str,
-            |eid| Ref::Uid { path, eid },
+            |eid| Ref::Uid { path: path.clone(), eid },
         ),
         map(
             delimited(
@@ -460,7 +462,7 @@ fn parse_ref(input: &str) -> IResult<&str, Node<Ref>> {
                 separated_list0(ws(char(',')), parse_ref_init),
                 ws(char('}')),
             ),
-            |rinits| Ref::Ref { path, rinits },
+            |rinits| Ref::Ref { path: path.clone(), rinits },
         ),
     ));
 
@@ -544,14 +546,18 @@ fn parse_cond(input: &str) -> IResult<&str, Node<Cond>> {
     )))
 }
 
-pub fn parse_policy_file(input: &str) -> Result<Policies, String> {
+pub fn parse_policy_file(input: &str) -> Result<Node<cst::Policies>, String> {
     let mut parser = all_consuming(map(
         many0(ws(parse_policy)),
-        Policies,
+        |policies| Node::with_maybe_source_loc(
+            Some(cst::Policies(policies)),
+            None
+        ),
     ));
 
     match parser.parse(input) {
-        Ok((_, policies)) => Ok(policies),
-        Err(e) => Err(format!("Parse error: {:?}", e)),
+        Ok((_, node)) => Ok(node),
+        Err(e) => Err("fail".to_string()),
     }
 }
+

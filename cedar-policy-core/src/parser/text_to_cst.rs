@@ -167,7 +167,7 @@ pub fn parse_ident(text: &str) -> Result<Node<Option<cst::Ident>>, err::ParseErr
 pub fn parse_policies_raw(text: &str) -> Result<Node<Option<cst::Policies>>, err::ParseErrors> {
     use super::combinator::parse_policy_file;
 
-    parse_policy_file(text, false)
+    Ok(parse_policy_file(text).unwrap())
     // parse_collect_errors(
     //     &*POLICIES_PARSER,
     //     grammar::PoliciesParser::parse,
