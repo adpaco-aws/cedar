@@ -1498,6 +1498,57 @@ impl<'a> SingleEnvTypechecker<'a> {
                 })
             }
 
+            BinaryOp::Union => {
+                // TODO: Review this code
+                self.expect_type(
+                    prior_capability,
+                    arg1,
+                    Type::any_set(),
+                    type_errors,
+                    |actual| match actual {
+                        Type::EntityOrRecord(
+                            EntityRecordKind::AnyEntity
+                            | EntityRecordKind::Entity(_)
+                            | EntityRecordKind::ActionEntity { .. },
+                        ) => Some(UnexpectedTypeHelp::TryUsingIn),
+                        Type::EntityOrRecord(EntityRecordKind::Record { .. }) => {
+                            Some(UnexpectedTypeHelp::TryUsingHas)
+                        }
+                        Type::Primitive {
+                            primitive_type: Primitive::String,
+                        } => Some(UnexpectedTypeHelp::TryUsingLike),
+                        _ => None,
+                    },
+                )
+                .then_typecheck(|expr_ty_arg1, _| {
+                    self.expect_type(prior_capability, arg2, Type::any_set(), type_errors, |_| {
+                        Some(UnexpectedTypeHelp::TryUsingSingleContains)
+                    })
+                    .then_typecheck(|expr_ty_arg2, _| {
+                        if self.mode.is_strict() {
+                            let annotated_expr =
+                                ExprBuilder::with_data(Some(Type::any_set()))
+                                    .with_same_source_loc(bin_expr)
+                                    .binary_app(*op, expr_ty_arg1.clone(), expr_ty_arg2.clone());
+                            self.enforce_strict_equality(
+                                bin_expr,
+                                annotated_expr,
+                                expr_ty_arg1.data().as_ref(),
+                                expr_ty_arg2.data().as_ref(),
+                                type_errors,
+                                LubContext::Union,
+                            )
+                        } else {
+                            TypecheckAnswer::success(
+                                ExprBuilder::with_data(Some(Type::any_set()))
+                                    .with_same_source_loc(bin_expr)
+                                    .binary_app(*op, expr_ty_arg1, expr_ty_arg2),
+                            )
+                        }
+                    })
+                })
+            }
+
             BinaryOp::HasTag => self
                 .expect_type(
                     prior_capability,

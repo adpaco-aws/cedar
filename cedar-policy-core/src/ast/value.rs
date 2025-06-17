@@ -476,6 +476,10 @@ impl Set {
             _ => self.authoritative.contains(value),
         }
     }
+
+    pub fn union(&self, other: &Set) -> Set {
+        self.clone()
+    }
 }
 
 impl FromIterator<Value> for Set {

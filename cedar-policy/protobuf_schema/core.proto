@@ -235,6 +235,7 @@ message Expr {
             ContainsAny = 9;
             GetTag = 10;
             HasTag = 11;
+            Union = 12;
         }
     }
 

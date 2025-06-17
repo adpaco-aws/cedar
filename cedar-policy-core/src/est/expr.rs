@@ -304,6 +304,13 @@ pub enum ExprNoExt {
         /// Right-hand argument (inside the `()`)
         right: Arc<Expr>,
     },
+    #[serde(rename = "union")]
+    Union {
+        /// Left-hand argument (receiver)
+        left: Arc<Expr>,
+        /// Right-hand argument (inside the `()`)
+        right: Arc<Expr>,
+    },
     /// `isEmpty()`
     #[serde(rename = "isEmpty")]
     IsEmpty {
@@ -591,6 +598,14 @@ impl ExprBuilder for Builder {
         })
     }
 
+    /// `left.union(right)`
+    fn union(self, left: Expr, right: Expr) -> Expr {
+        Expr::ExprNoExt(ExprNoExt::Union {
+            left: Arc::new(left),
+            right: Arc::new(right),
+        })
+    }
+
     /// `arg.isEmpty()`
     fn is_empty(self, expr: Expr) -> Expr {
         Expr::ExprNoExt(ExprNoExt::IsEmpty {
@@ -791,6 +806,12 @@ impl Expr {
                         right: Arc::new(Arc::unwrap_or_clone(right).sub_entity_literals(mapping)?),
                     }))
                 }
+                ExprNoExt::Union { left, right } => {
+                    Ok(Expr::ExprNoExt(ExprNoExt::Union {
+                        left: Arc::new(Arc::unwrap_or_clone(left).sub_entity_literals(mapping)?),
+                        right: Arc::new(Arc::unwrap_or_clone(right).sub_entity_literals(mapping)?),
+                    }))
+                }
                 ExprNoExt::IsEmpty { arg } => Ok(Expr::ExprNoExt(ExprNoExt::IsEmpty {
                     arg: Arc::new(Arc::unwrap_or_clone(arg).sub_entity_literals(mapping)?),
                 })),
@@ -954,6 +975,10 @@ impl Expr {
                 Arc::unwrap_or_clone(right).try_into_ast(id)?,
             )),
             Expr::ExprNoExt(ExprNoExt::ContainsAny { left, right }) => Ok(ast::Expr::contains_any(
+                Arc::unwrap_or_clone(left).try_into_ast(id)?,
+                Arc::unwrap_or_clone(right).try_into_ast(id)?,
+            )),
+            Expr::ExprNoExt(ExprNoExt::Union { left, right }) => Ok(ast::Expr::union(
                 Arc::unwrap_or_clone(left).try_into_ast(id)?,
                 Arc::unwrap_or_clone(right).try_into_ast(id)?,
             )),
@@ -1306,6 +1331,10 @@ impl BoundedDisplay for ExprNoExt {
                 maybe_with_parens(f, left, n)?;
                 write!(f, ".containsAny({right})")
             }
+            ExprNoExt::Union { left, right } => {
+                maybe_with_parens(f, left, n)?;
+                write!(f, ".union({right})")
+            }
             ExprNoExt::IsEmpty { arg } => {
                 maybe_with_parens(f, arg, n)?;
                 write!(f, ".isEmpty()")
@@ -1495,6 +1524,7 @@ fn maybe_with_parens(
         Expr::ExprNoExt(ExprNoExt::Contains { .. }) |
         Expr::ExprNoExt(ExprNoExt::ContainsAll { .. }) |
         Expr::ExprNoExt(ExprNoExt::ContainsAny { .. }) |
+        Expr::ExprNoExt(ExprNoExt::Union { .. }) |
         Expr::ExprNoExt(ExprNoExt::IsEmpty { .. }) |
         Expr::ExprNoExt(ExprNoExt::GetAttr { .. }) |
         Expr::ExprNoExt(ExprNoExt::HasAttr { .. }) |

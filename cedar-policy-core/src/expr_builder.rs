@@ -146,6 +146,8 @@ pub trait ExprBuilder: Clone {
     /// Create an 'contains_any' expression. Arguments must evaluate to Set type
     fn contains_any(self, e1: Self::Expr, e2: Self::Expr) -> Self::Expr;
 
+    fn union(self, e1: Self::Expr, e2: Self::Expr) -> Self::Expr;
+
     /// Create an 'is_empty' expression. Argument must evaluate to Set type
     fn is_empty(self, expr: Self::Expr) -> Self::Expr;
 
@@ -233,6 +235,7 @@ pub trait ExprBuilder: Clone {
             BinaryOp::ContainsAny => self.contains_any(arg1, arg2),
             BinaryOp::GetTag => self.get_tag(arg1, arg2),
             BinaryOp::HasTag => self.has_tag(arg1, arg2),
+            BinaryOp::Union => self.union(arg1, arg2),
         }
     }
 

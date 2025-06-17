@@ -51,7 +51,8 @@ impl<T: Default + Clone> expr_builder::ExprBuilder for ExprWithErrsBuilder<T> {
     fn with_data(data: T) -> Self {
         Self {
             source_loc: None,
-            data,
+            dat
+    fn union(self, expr: Expr<T>, tag: Expr<T>) -> Expr<T>;a,
         }
     }
 
@@ -259,6 +260,14 @@ impl<T: Default + Clone> expr_builder::ExprBuilder for ExprWithErrsBuilder<T> {
     fn has_tag(self, expr: Expr<T>, tag: Expr<T>) -> Expr<T> {
         self.with_expr_kind(ExprKind::BinaryApp {
             op: BinaryOp::HasTag,
+            arg1: Arc::new(expr),
+            arg2: Arc::new(tag),
+        })
+    }
+
+    fn union(self, expr: Expr<T>, tag: Expr<T>) -> Expr<T> {
+        self.with_expr_kind(ExprKind::BinaryApp {
+            op: BinaryOp::Union,
             arg1: Arc::new(expr),
             arg2: Arc::new(tag),
         })

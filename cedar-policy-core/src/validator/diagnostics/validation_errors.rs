@@ -299,6 +299,9 @@ pub enum LubContext {
     /// In the operand of `containsAny` or `containsAll`
     #[error("elements of both set operands to a `containsAll` or `containsAny` expression")]
     ContainsAnyAll,
+    /// In the operand of `union`
+    #[error("elements of both set operands to a `union` expression")]
+    Union,
     /// While computing the type of a `.getTag()` operation
     #[error("tag types for a `.getTag()` operation")]
     GetTag,

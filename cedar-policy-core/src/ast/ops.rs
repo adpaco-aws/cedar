@@ -110,6 +110,7 @@ pub enum BinaryOp {
     ///
     /// First argument must have Entity type, second argument must have String type.
     HasTag,
+    Union,
 }
 
 impl std::fmt::Display for BinaryOp {
@@ -127,6 +128,7 @@ impl std::fmt::Display for BinaryOp {
             BinaryOp::ContainsAny => write!(f, "containsAny"),
             BinaryOp::GetTag => write!(f, "getTag"),
             BinaryOp::HasTag => write!(f, "hasTag"),
+            BinaryOp::Union => write!(f, "union"),
         }
     }
 }

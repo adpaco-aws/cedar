@@ -606,6 +606,11 @@ impl<'e> Evaluator<'e> {
                         let arg2_set = arg2.get_as_set()?;
                         Ok((!arg1_set.is_disjoint(arg2_set)).into())
                     }
+                    BinaryOp::Union => {
+                        let arg1_set = arg1.get_as_set()?;
+                        let arg2_set = arg2.get_as_set()?;
+                        Ok((arg1_set.union(arg2_set)).into())
+                    }
                     // GetTag and HasTag, which require an Entity on the left and a String on the right
                     BinaryOp::GetTag | BinaryOp::HasTag => {
                         let uid = arg1.get_as_entity()?;

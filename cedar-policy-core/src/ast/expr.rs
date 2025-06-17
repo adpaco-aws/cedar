@@ -374,6 +374,10 @@ impl<T> Expr<T> {
                 ..
             } => Some(Type::Bool),
             ExprKind::BinaryApp {
+                op: BinaryOp::Union,
+                ..
+            } => Some(Type::Set),
+            ExprKind::BinaryApp {
                 op: BinaryOp::HasTag,
                 ..
             } => Some(Type::Bool),
@@ -612,6 +616,10 @@ impl Expr {
     /// Create a `containsAny` expression. Arguments must evaluate to Set type
     pub fn contains_any(e1: Expr, e2: Expr) -> Self {
         ExprBuilder::new().contains_any(e1, e2)
+    }
+
+    pub fn union(e1: Expr, e2: Expr) -> Self {
+        ExprBuilder::new().union(e1, e2)
     }
 
     /// Create a `isEmpty` expression. Argument must evaluate to Set type
@@ -1156,6 +1164,15 @@ impl<T: Default + Clone> expr_builder::ExprBuilder for ExprBuilder<T> {
     fn contains_any(self, e1: Expr<T>, e2: Expr<T>) -> Expr<T> {
         self.with_expr_kind(ExprKind::BinaryApp {
             op: BinaryOp::ContainsAny,
+            arg1: Arc::new(e1),
+            arg2: Arc::new(e2),
+        })
+    }
+
+    
+    fn union(self, e1: Expr<T>, e2: Expr<T>) -> Expr<T> {
+        self.with_expr_kind(ExprKind::BinaryApp {
+            op: BinaryOp::Union,
             arg1: Arc::new(e1),
             arg2: Arc::new(e2),
         })
