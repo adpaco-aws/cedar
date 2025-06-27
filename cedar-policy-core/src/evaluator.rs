@@ -609,7 +609,7 @@ impl<'e> Evaluator<'e> {
                     BinaryOp::Union => {
                         let arg1_set = arg1.get_as_set()?;
                         let arg2_set = arg2.get_as_set()?;
-                        Ok((arg1_set.union(arg2_set)).into())
+                        Ok(Value { value: ValueKind::Set(arg1_set.union(arg2_set)), loc: None }.into())
                     }
                     // GetTag and HasTag, which require an Entity on the left and a String on the right
                     BinaryOp::GetTag | BinaryOp::HasTag => {
