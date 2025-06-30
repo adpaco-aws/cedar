@@ -477,8 +477,26 @@ impl Set {
         }
     }
 
+    /// Union operation
     pub fn union(&self, other: &Set) -> Set {
-        self.clone()
+        match (&self.fast, &other.fast) {
+            // Both sets contain only literals - use `HashSet` union
+            (Some(ls1), Some(ls2)) => {
+                let union_fast: HashSet<Literal> = ls1.union(ls2).cloned().collect();
+                Set {
+                    authoritative: Arc::new(union_fast.iter().cloned().map(Into::into).collect()),
+                    fast: Some(Arc::new(union_fast)),
+                }
+            }
+            // At least one set contains non-literals - use `BTreeSet` union
+            _ => {
+                let union_auth: BTreeSet<Value> = self.authoritative.union(&other.authoritative).cloned().collect();
+                Set {
+                    authoritative: Arc::new(union_auth),
+                    fast: None,
+                }
+            }
+        }
     }
 }
 

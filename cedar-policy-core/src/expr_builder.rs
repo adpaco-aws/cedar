@@ -146,6 +146,7 @@ pub trait ExprBuilder: Clone {
     /// Create an 'contains_any' expression. Arguments must evaluate to Set type
     fn contains_any(self, e1: Self::Expr, e2: Self::Expr) -> Self::Expr;
 
+    /// Create an 'union' expression. Arguments must evaluate to Set type
     fn union(self, e1: Self::Expr, e2: Self::Expr) -> Self::Expr;
 
     /// Create an 'is_empty' expression. Argument must evaluate to Set type

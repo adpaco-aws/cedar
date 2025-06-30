@@ -304,6 +304,7 @@ pub enum ExprNoExt {
         /// Right-hand argument (inside the `()`)
         right: Arc<Expr>,
     },
+    /// `union()`
     #[serde(rename = "union")]
     Union {
         /// Left-hand argument (receiver)
