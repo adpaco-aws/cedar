@@ -804,6 +804,10 @@ impl ast::UnreservedId {
                 .map(|arg| builder.contains_all(e, arg)),
             "containsAny" => extract_single_argument(args.into_iter(), "containsAny", loc)
                 .map(|arg| builder.contains_any(e, arg)),
+            "union" => {
+                extract_single_argument(args.into_iter(), "union", loc)
+                .map(|arg| builder.contains(e, arg))
+            }
             "isEmpty" => {
                 require_zero_arguments(&args.into_iter(), "isEmpty", loc)?;
                 Ok(builder.is_empty(e))
@@ -2215,7 +2219,7 @@ impl ast::Name {
             if EXTENSION_STYLES.methods.contains(&id)
                 || matches!(
                     id.as_ref(),
-                    "contains" | "containsAll" | "containsAny" | "isEmpty" | "getTag" | "hasTag"
+                    "contains" | "containsAll" | "containsAny" | "union" | "isEmpty" | "getTag" | "hasTag"
                 )
             {
                 return Err(ToASTError::new(
