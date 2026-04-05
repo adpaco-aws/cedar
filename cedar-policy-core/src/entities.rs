@@ -126,7 +126,7 @@ impl Entities {
             other
                 .entities
                 .get(id)
-                .map_or(false, |other_entity| entity.deep_eq(other_entity))
+                .is_some_and(|other_entity| entity.deep_eq(other_entity))
         })
     }
 
@@ -542,17 +542,12 @@ where
     }
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
 enum Mode {
+    #[default]
     Concrete,
     #[cfg(feature = "partial-eval")]
     Partial,
-}
-
-impl Default for Mode {
-    fn default() -> Self {
-        Self::Concrete
-    }
 }
 
 /// Describes the option for how the TC (transitive closure) of the entity
