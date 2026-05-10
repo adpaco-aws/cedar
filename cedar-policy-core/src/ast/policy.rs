@@ -275,8 +275,8 @@ impl Template {
             .collect::<Vec<_>>();
 
         let extra = values
-            .iter()
-            .filter_map(|(slot, _)| {
+            .keys()
+            .filter_map(|slot| {
                 if !template
                     .slots
                     .iter()
