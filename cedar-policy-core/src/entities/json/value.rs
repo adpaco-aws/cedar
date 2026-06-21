@@ -176,18 +176,15 @@ impl From<RawCedarValueJson> for CedarValueJson {
                         [("__expr", RawCedarValueJson::String(s))] => {
                             return Self::ExprEscape { __expr: s.clone() };
                         }
-                        [("__entity", RawCedarValueJson::Record(r))] => {
-                            if r.values.len() >= 2 {
-                                if let Some(RawCedarValueJson::String(ty)) = r.values.get("type") {
-                                    if let Some(RawCedarValueJson::String(id)) = r.values.get("id")
-                                    {
-                                        return Self::EntityEscape {
-                                            __entity: TypeAndId {
-                                                entity_type: ty.clone(),
-                                                id: id.clone(),
-                                            },
-                                        };
-                                    }
+                        [("__entity", RawCedarValueJson::Record(r))] if r.values.len() >= 2 => {
+                            if let Some(RawCedarValueJson::String(ty)) = r.values.get("type") {
+                                if let Some(RawCedarValueJson::String(id)) = r.values.get("id") {
+                                    return Self::EntityEscape {
+                                        __entity: TypeAndId {
+                                            entity_type: ty.clone(),
+                                            id: id.clone(),
+                                        },
+                                    };
                                 }
                             }
                         }
