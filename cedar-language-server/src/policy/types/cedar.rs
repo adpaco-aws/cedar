@@ -266,7 +266,7 @@ impl ToDocumentationString for CedarTypeKind {
 
                 let mut code = String::from("{\n");
                 let mut sorted_fields: Vec<_> = fields.attrs.iter().collect();
-                sorted_fields.sort_by(|(a, _), (b, _)| a.cmp(b));
+                sorted_fields.sort_by_key(|(a, _)| *a);
 
                 for (name, typ) in sorted_fields {
                     let _ = write!(code, "    {name}: ");
@@ -314,13 +314,13 @@ fn get_set_methods<T: Into<String>>(element_type_str: T) -> Vec<MethodInfo> {
         MethodInfo::new(
             "containsAll",
             Some(ContainsAllDocumentation.to_documentation_string(None)),
-            vec![("other".to_string(), format!("Set<{}>", &element_type_str))],
+            vec![("other".to_string(), format!("Set<{}>", element_type_str))],
             "bool",
         ),
         MethodInfo::new(
             "containsAny",
             Some(ContainsAnyDocumentation.to_documentation_string(None)),
-            vec![("other".to_string(), format!("Set<{}>", &element_type_str))],
+            vec![("other".to_string(), format!("Set<{}>", element_type_str))],
             "bool",
         ),
         MethodInfo::new(
