@@ -140,7 +140,7 @@ pub fn parse_policies_from_test(test: &JsonTest) -> PolicySet {
     let policies_text = std::fs::read_to_string(policy_file)
         .unwrap_or_else(|e| panic!("error loading policy file {}: {e}", test.policies));
     PolicySet::from_str(&policies_text)
-        .unwrap_or_else(|e| panic!("error parsing policy file {}: {e}", &test.policies))
+        .unwrap_or_else(|e| panic!("error parsing policy file {}: {e}", test.policies))
 }
 
 /// Given a `JsonTest`, parse the provided schema file.
@@ -151,9 +151,9 @@ pub fn parse_policies_from_test(test: &JsonTest) -> PolicySet {
 pub fn parse_schema_from_test(test: &JsonTest) -> Schema {
     let schema_file = resolve_integration_test_path(&test.schema);
     let schema_text = std::fs::read_to_string(schema_file)
-        .unwrap_or_else(|e| panic!("error loading schema file {}: {e}", &test.schema));
+        .unwrap_or_else(|e| panic!("error loading schema file {}: {e}", test.schema));
     Schema::from_cedarschema_str(&schema_text)
-        .unwrap_or_else(|e| panic!("error parsing schema in {}: {e}", &test.schema))
+        .unwrap_or_else(|e| panic!("error parsing schema in {}: {e}", test.schema))
         .0
 }
 
@@ -167,10 +167,10 @@ pub fn parse_entities_from_test(test: &JsonTest, schema: &Schema) -> Entities {
     let json = std::fs::OpenOptions::new()
         .read(true)
         .open(entity_file)
-        .unwrap_or_else(|e| panic!("error opening entity file {}: {e}", &test.entities));
+        .unwrap_or_else(|e| panic!("error opening entity file {}: {e}", test.entities));
 
     Entities::from_json_file(json, Some(schema))
-        .unwrap_or_else(|e| panic!("error parsing entities in {}: {e}", &test.entities))
+        .unwrap_or_else(|e| panic!("error parsing entities in {}: {e}", test.entities))
 }
 
 // PANIC SAFETY this is testing code
@@ -244,7 +244,7 @@ fn check_matches_json(
         response.response.decision(),
         json_request.decision,
         "test {test_name} failed for request \"{}\": unexpected decision",
-        &json_request.description
+        json_request.description
     );
     // check reason
     let reason: HashSet<PolicyId> = response.response.diagnostics().reason().cloned().collect();
@@ -252,7 +252,7 @@ fn check_matches_json(
         reason,
         json_request.reason.iter().cloned().collect(),
         "test {test_name} failed for request \"{}\": unexpected reason",
-        &json_request.description
+        json_request.description
     );
     // check errors, if applicable
     // for now, the integration tests only support the `PolicyIds` comparison mode
@@ -267,7 +267,7 @@ fn check_matches_json(
             errors,
             json_request.errors.iter().cloned().collect(),
             "test {test_name} failed for request \"{}\": unexpected errors",
-            &json_request.description
+            json_request.description
         );
     }
 }

@@ -825,9 +825,9 @@ impl ActionFragment<ConditionalName, ConditionalName> {
 
         for (k, v) in m {
             let t = Self::jsonval_to_type_helper(&v, action_id);
-            match t {
-                Ok(ty) => attr_types.insert(k.clone(), ty),
-                Err(e) => return Err(e),
+            {
+                let ty = t?;
+                attr_types.insert(k.clone(), ty)
             };
 
             // As an artifact of the limited `CedarValueJson` variants accepted by
@@ -876,9 +876,9 @@ impl ActionFragment<ConditionalName, ConditionalName> {
                 let mut required_attrs: HashMap<SmolStr, Type> = HashMap::with_capacity(r.len());
                 for (k, v_prime) in r {
                     let t = Self::jsonval_to_type_helper(v_prime, action_id);
-                    match t {
-                        Ok(ty) => required_attrs.insert(k.clone(), ty),
-                        Err(e) => return Err(e),
+                    {
+                        let ty = t?;
+                        required_attrs.insert(k.clone(), ty)
                     };
                 }
                 Ok(Type::record_with_required_attributes(
@@ -1204,8 +1204,8 @@ pub(crate) fn try_record_type_into_validator_type(
         #[cfg(not(feature = "extended-schema"))]
         let attr_loc = None;
         Ok(
-            parse_record_attributes(rty.attributes.into_iter(), extensions, attr_loc)?.map(
-                move |attrs| ValidatorType {
+            parse_record_attributes(rty.attributes, extensions, attr_loc)?.map(move |attrs| {
+                ValidatorType {
                     ty: Type::record_with_attributes(
                         attrs,
                         if rty.additional_attributes {
@@ -1216,8 +1216,8 @@ pub(crate) fn try_record_type_into_validator_type(
                     ),
                     #[cfg(feature = "extended-schema")]
                     loc,
-                },
-            ),
+                }
+            }),
         )
     }
 }

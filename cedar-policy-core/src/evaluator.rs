@@ -1072,7 +1072,7 @@ impl std::fmt::Debug for Evaluator<'_> {
         write!(
             f,
             "<Evaluator with principal = {:?}, action = {:?}, resource = {:?}",
-            &self.principal, &self.action, &self.resource
+            self.principal, self.action, self.resource
         )
     }
 }
