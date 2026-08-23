@@ -176,18 +176,15 @@ impl From<RawCedarValueJson> for CedarValueJson {
                         [("__expr", RawCedarValueJson::String(s))] => {
                             return Self::ExprEscape { __expr: s.clone() };
                         }
-                        [("__entity", RawCedarValueJson::Record(r))] => {
-                            if r.values.len() >= 2 {
-                                if let Some(RawCedarValueJson::String(ty)) = r.values.get("type") {
-                                    if let Some(RawCedarValueJson::String(id)) = r.values.get("id")
-                                    {
-                                        return Self::EntityEscape {
-                                            __entity: TypeAndId {
-                                                entity_type: ty.clone(),
-                                                id: id.clone(),
-                                            },
-                                        };
-                                    }
+                        [("__entity", RawCedarValueJson::Record(r))] if r.values.len() >= 2 => {
+                            if let Some(RawCedarValueJson::String(ty)) = r.values.get("type") {
+                                if let Some(RawCedarValueJson::String(id)) = r.values.get("id") {
+                                    return Self::EntityEscape {
+                                        __entity: TypeAndId {
+                                            entity_type: ty.clone(),
+                                            id: id.clone(),
+                                        },
+                                    };
                                 }
                             }
                         }
@@ -403,7 +400,7 @@ impl CedarValueJson {
             Self::EntityEscape { __entity: entity } => Ok(RestrictedExpr::val(
                 EntityUID::try_from(entity.clone()).map_err(|errs| {
                     let err_msg = serde_json::to_string_pretty(&entity)
-                        .unwrap_or_else(|_| format!("{:?}", &entity));
+                        .unwrap_or_else(|_| format!("{:?}", entity));
                     JsonDeserializationError::parse_escape(EscapeKind::Entity, err_msg, errs)
                 })?,
             )),

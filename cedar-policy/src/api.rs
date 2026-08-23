@@ -3830,10 +3830,9 @@ impl Policy {
             .sub_entity_literals(&mapping)
             .expect("Internal error, failed to sub entity literals.");
 
-        let ast = match est.clone().try_into_ast_policy(Some(self.ast.id().clone())) {
-            Ok(ast) => ast,
-            Err(e) => return Err(e.into()),
-        };
+        let ast = est
+            .clone()
+            .try_into_ast_policy(Some(self.ast.id().clone()))?;
 
         Ok(Self {
             ast,
@@ -4195,7 +4194,7 @@ impl FromStr for Expression {
 
 impl std::fmt::Display for Expression {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "{}", &self.0)
+        write!(f, "{}", self.0)
     }
 }
 

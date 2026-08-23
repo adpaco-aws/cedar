@@ -24,8 +24,8 @@ use miette::Diagnostic;
 use nonempty::NonEmpty;
 use thiserror::Error;
 
+use crate::ast::InternalName;
 use crate::validator::{json_schema, RawName};
-use crate::{ast::InternalName, impl_diagnostic_from_method_on_nonempty_field};
 
 /// Number of spaces of indentation per level in the Cedarschema file
 pub const NUM_INDENTATION_SPACES: usize = 2;
@@ -325,7 +325,7 @@ impl<N: Display> IndentedDisplay for json_schema::ActionType<N> {
                     fmt_non_empty_slice(f, ps)?;
                     write!(f, ",\n{member_indent}resource: ")?;
                     fmt_non_empty_slice(f, rs)?;
-                    write!(f, ",\n{member_indent}context: {}", &spec.context.0)?;
+                    write!(f, ",\n{member_indent}context: {}", spec.context.0)?;
 
                     write!(f, "\n{base_indentation}}}")?;
                 }
